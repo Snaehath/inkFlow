@@ -3,11 +3,8 @@ import {
   Check, 
   RotateCw, 
   X, 
-  Lightbulb, 
   ArrowRight, 
-  Maximize2,
-  Sparkles,
-  CheckCheck
+  Maximize2
 } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { Card } from '../ui/card';
@@ -36,39 +33,39 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({ onAccept, onTryA
 
   const taskConfig = {
     continue: {
-      title: 'Continuation Suggestions',
-      subtitle: 'Select a paragraph continuation to advance your scene',
+      title: 'Story Continuation',
+      subtitle: 'Polished narrative continuation with seamless flow & corrected cadence',
       icon: ArrowRight,
       actionLabel: 'Accept & Insert',
       actionIcon: Check,
     },
     format: {
-      title: 'Format & Fix Passage',
-      subtitle: 'Fixed grammar, spelling, punctuation and sentence cadence',
-      icon: CheckCheck,
-      actionLabel: 'Replace with Formatted Prose',
+      title: 'Story Continuation',
+      subtitle: 'Polished narrative continuation with seamless flow & corrected cadence',
+      icon: ArrowRight,
+      actionLabel: 'Accept & Insert',
       actionIcon: Check,
     },
     rewrite: {
-      title: 'Rewrite Variations',
-      subtitle: 'Select a stylistic variation to replace the active passage',
-      icon: RotateCw,
-      actionLabel: 'Replace Passage',
+      title: 'Scene Expansion',
+      subtitle: 'Rich passage deepening sensory detail and atmosphere',
+      icon: Maximize2,
+      actionLabel: 'Insert Expansion',
       actionIcon: Check,
     },
     expand: {
-      title: 'Expanded Scene Options',
-      subtitle: 'Rich variations deepening sensory detail and atmosphere',
+      title: 'Scene Expansion',
+      subtitle: 'Rich passage deepening sensory detail and atmosphere',
       icon: Maximize2,
       actionLabel: 'Insert Expansion',
       actionIcon: Check,
     },
     brainstorm: {
-      title: 'Brainstormed Directions',
-      subtitle: 'Pick a creative direction to draft into your manuscript',
-      icon: Lightbulb,
-      actionLabel: 'Draft from this Idea',
-      actionIcon: Sparkles,
+      title: 'Story Continuation',
+      subtitle: 'Polished narrative continuation with seamless flow',
+      icon: ArrowRight,
+      actionLabel: 'Accept & Insert',
+      actionIcon: Check,
     },
   }[suggestionTaskType || 'continue'];
 

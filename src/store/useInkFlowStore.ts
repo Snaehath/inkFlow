@@ -44,6 +44,7 @@ interface InkFlowState {
   isSuggestionsCardOpen: boolean;
   suggestionTaskType: 'continue' | 'format' | 'rewrite' | 'expand' | 'brainstorm';
   generationMode: 'suggest' | 'write-for-me';
+  writingFlowMode: 'co-assist' | 'full-auto';
   modelRoutingMode: 'auto' | 'manual';
 
   // UI Overlays & Drawers
@@ -96,6 +97,7 @@ interface InkFlowState {
   setIsSuggestionsCardOpen: (open: boolean) => void;
   setSuggestionTaskType: (type: 'continue' | 'format' | 'rewrite' | 'expand' | 'brainstorm') => void;
   setGenerationMode: (mode: 'suggest' | 'write-for-me') => void;
+  setWritingFlowMode: (mode: 'co-assist' | 'full-auto') => void;
   setModelRoutingMode: (mode: 'auto' | 'manual') => void;
   dismissSuggestions: () => void;
   
@@ -155,7 +157,8 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
   selectedSuggestionIndex: 0,
   isSuggestionsCardOpen: false,
   suggestionTaskType: 'continue',
-  generationMode: 'suggest',
+  generationMode: 'write-for-me',
+  writingFlowMode: 'co-assist',
   modelRoutingMode: 'auto',
 
   isFocusMode: false,
@@ -218,11 +221,14 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
   }),
 
   applySkillToSession: () => set((state) => {
-    const firstLine = state.activeSkillMarkdown.split('\n')[0] || '';
+    const activeSkill = state.savedSkills.find(s => s.id === state.activeSkillId);
+    const md = activeSkill?.markdown || state.activeSkillMarkdown;
+    const firstLine = md.split('\n')[0] || '';
     const name = firstLine.replace(/^#\s*/, '').trim() || 'Custom Partner';
     return {
       isSkillApplied: true,
-      activeSkillName: name
+      activeSkillName: name,
+      activeSkillMarkdown: md
     };
   }),
 
@@ -241,6 +247,7 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
       return {
         savedSkills: updated,
         activeSkillName: cleanName,
+        activeSkillMarkdown: markdown,
         isSkillApplied: true
       };
     } else {
@@ -256,6 +263,7 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
         savedSkills: [newSkill, ...state.savedSkills],
         activeSkillId: newSkill.id,
         activeSkillName: cleanName,
+        activeSkillMarkdown: markdown,
         isSkillApplied: true
       };
     }
@@ -287,6 +295,7 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
   setIsSuggestionsCardOpen: (open) => set({ isSuggestionsCardOpen: open }),
   setSuggestionTaskType: (type) => set({ suggestionTaskType: type }),
   setGenerationMode: (mode) => set({ generationMode: mode }),
+  setWritingFlowMode: (mode) => set({ writingFlowMode: mode }),
   setModelRoutingMode: (mode) => set({ modelRoutingMode: mode }),
   dismissSuggestions: () => set({ isSuggestionsCardOpen: false }),
 

@@ -87,7 +87,9 @@ export function resolveModelForTask(
     case 'suggest':
     case 'write-for-me': {
       // Prioritize creative writer models like gemma-writer, fable, qwen
-      const creativeMatch = allowed.find(m => /writer|fable|creative/i.test(m))
+      const creativeMatch = allowed.find(m => /gemma-writer/i.test(m))
+        || allowed.find(m => /writer/i.test(m))
+        || allowed.find(m => /fable/i.test(m))
         || allowed.find(m => /qwen/i.test(m))
         || allowed.find(m => /gemma/i.test(m))
         || allowed[0];
@@ -101,10 +103,11 @@ export function resolveModelForTask(
 
     case 'rewrite':
     case 'expand': {
-      // Prioritize precision / editorial models like llama, qwen, gemma
-      const editorialMatch = allowed.find(m => /llama/i.test(m))
+      // Prioritize creative writer models for evocative scene expansion
+      const editorialMatch = allowed.find(m => /gemma-writer/i.test(m))
+        || allowed.find(m => /writer/i.test(m))
+        || allowed.find(m => /fable/i.test(m))
         || allowed.find(m => /qwen/i.test(m))
-        || allowed.find(m => /writer|fable/i.test(m))
         || allowed[0];
 
       return {

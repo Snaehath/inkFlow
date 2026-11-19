@@ -79,11 +79,12 @@ export async function requestOllamaCompletion(
   model: string,
   prompt: string,
   systemPrompt?: string,
-  baseUrl = 'http://localhost:11434'
+  baseUrl = 'http://localhost:11434',
+  numPredict = 700
 ): Promise<string> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout for local model warm-up and generation
+    const timeout = setTimeout(() => controller.abort(), 90000); // 90s timeout for local model warm-up and generation
     const res = await fetch(`${baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -95,8 +96,8 @@ export async function requestOllamaCompletion(
         options: {
           temperature: 0.75,
           top_p: 0.9,
-          repeat_penalty: 1.22,
-          num_predict: 400,
+          repeat_penalty: 1.18,
+          num_predict: numPredict,
         }
       }),
       signal: controller.signal
@@ -106,7 +107,15 @@ export async function requestOllamaCompletion(
     if (res.ok) {
       const data = await res.json();
       if (data.response) {
-        return data.response.trim();
+        const text = data.response.trim();
+        // If text contains thinking blocks, strip them
+        const stripped = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        if (stripped) {
+          return stripped;
+        }
+        // If model only outputted inside think tags, strip the tags themselves and salvage the prose
+        const insideThink = text.replace(/<\/?think>/gi, '').trim();
+        return insideThink || text;
       }
     }
   } catch (err) {
