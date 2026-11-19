@@ -38,10 +38,11 @@ interface InkFlowState {
   isSkillApplied: boolean;
   savedSkills: SkillItem[];
 
-  // Inline Continuation Suggestions
+  // Inline Suggestions & Editor AI Responses
   continuationSuggestions: string[];
   selectedSuggestionIndex: number;
   isSuggestionsCardOpen: boolean;
+  suggestionTaskType: 'continue' | 'rewrite' | 'expand' | 'brainstorm';
   generationMode: 'suggest' | 'write-for-me';
   modelRoutingMode: 'auto' | 'manual';
 
@@ -93,6 +94,7 @@ interface InkFlowState {
   setContinuationSuggestions: (suggestions: string[]) => void;
   setSelectedSuggestionIndex: (idx: number) => void;
   setIsSuggestionsCardOpen: (open: boolean) => void;
+  setSuggestionTaskType: (type: 'continue' | 'rewrite' | 'expand' | 'brainstorm') => void;
   setGenerationMode: (mode: 'suggest' | 'write-for-me') => void;
   setModelRoutingMode: (mode: 'auto' | 'manual') => void;
   dismissSuggestions: () => void;
@@ -152,6 +154,7 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
   continuationSuggestions: [],
   selectedSuggestionIndex: 0,
   isSuggestionsCardOpen: false,
+  suggestionTaskType: 'continue',
   generationMode: 'suggest',
   modelRoutingMode: 'auto',
 
@@ -282,6 +285,7 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
   }),
   setSelectedSuggestionIndex: (idx) => set({ selectedSuggestionIndex: idx }),
   setIsSuggestionsCardOpen: (open) => set({ isSuggestionsCardOpen: open }),
+  setSuggestionTaskType: (type) => set({ suggestionTaskType: type }),
   setGenerationMode: (mode) => set({ generationMode: mode }),
   setModelRoutingMode: (mode) => set({ modelRoutingMode: mode }),
   dismissSuggestions: () => set({ isSuggestionsCardOpen: false }),
@@ -305,7 +309,7 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
   setIsAIActionRunning: (running) => set({ isAIActionRunning: running }),
   setAIProvider: (provider) => set({ aiProvider: provider }),
   setSelectedModel: (model) => set({ selectedModel: model }),
-  setAvailableModels: (models) => set({ availableModels: models }),
+  setAvailableModels: (models) => set({ availableModels: models.filter(m => !/granite|ministral/i.test(m)) }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
   
   updateEditorStats: (stats) => set({ editorStats: stats }),

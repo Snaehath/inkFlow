@@ -9,6 +9,9 @@ export interface ModelRouteOption {
 }
 
 export function buildDynamicModelOptions(installedModels: string[]): ModelRouteOption[] {
+  // Filter out exempt models (granite, ministral)
+  const allowedModels = installedModels.filter(m => !/granite|ministral/i.test(m));
+
   const options: ModelRouteOption[] = [
     {
       id: 'auto-route',
@@ -18,7 +21,7 @@ export function buildDynamicModelOptions(installedModels: string[]): ModelRouteO
     }
   ];
 
-  if (installedModels.length === 0) {
+  if (allowedModels.length === 0) {
     options.push({
       id: 'waiting-ollama',
       label: 'Waiting for Ollama...',
@@ -28,7 +31,7 @@ export function buildDynamicModelOptions(installedModels: string[]): ModelRouteO
     return options;
   }
 
-  for (const model of installedModels) {
+  for (const model of allowedModels) {
     const isCreative = /writer|fable|novel|story|qwen/i.test(model);
     const isFast = /3b|4b|mini/i.test(model);
     
@@ -57,8 +60,11 @@ export function resolveModelForTask(
   taskType: TaskType,
   availableLocalModels: string[]
 ): { modelName: string; routingReason: string; isAuto: boolean } {
+  // Filter out exempt models (granite, ministral)
+  const allowed = availableLocalModels.filter(m => !/granite|ministral/i.test(m));
+
   // If no models available yet
-  if (availableLocalModels.length === 0) {
+  if (allowed.length === 0) {
     return {
       modelName: 'gemma-writer:latest',
       routingReason: 'Default fallback (Ollama connecting)',
@@ -67,7 +73,7 @@ export function resolveModelForTask(
   }
 
   // If user specifically picked a manual local model that is present, honor it directly
-  if (!currentSelection.startsWith('Auto') && availableLocalModels.includes(currentSelection)) {
+  if (!currentSelection.startsWith('Auto') && allowed.includes(currentSelection)) {
     return {
       modelName: currentSelection,
       routingReason: `Manual selection: ${currentSelection}`,
@@ -81,10 +87,10 @@ export function resolveModelForTask(
     case 'suggest':
     case 'write-for-me': {
       // Prioritize creative writer models like gemma-writer, fable, qwen
-      const creativeMatch = availableLocalModels.find(m => /writer|fable|creative/i.test(m))
-        || availableLocalModels.find(m => /qwen/i.test(m))
-        || availableLocalModels.find(m => /gemma/i.test(m))
-        || availableLocalModels[0];
+      const creativeMatch = allowed.find(m => /writer|fable|creative/i.test(m))
+        || allowed.find(m => /qwen/i.test(m))
+        || allowed.find(m => /gemma/i.test(m))
+        || allowed[0];
 
       return {
         modelName: creativeMatch,
@@ -95,10 +101,11 @@ export function resolveModelForTask(
 
     case 'rewrite':
     case 'expand': {
-      // Prioritize precision / editorial models like granite, llama, ministral
-      const editorialMatch = availableLocalModels.find(m => /granite|llama|ministral/i.test(m))
-        || availableLocalModels.find(m => /qwen/i.test(m))
-        || availableLocalModels[0];
+      // Prioritize precision / editorial models like llama, qwen, gemma
+      const editorialMatch = allowed.find(m => /llama/i.test(m))
+        || allowed.find(m => /qwen/i.test(m))
+        || allowed.find(m => /writer|fable/i.test(m))
+        || allowed[0];
 
       return {
         modelName: editorialMatch,
@@ -109,9 +116,10 @@ export function resolveModelForTask(
 
     case 'brainstorm': {
       // Prioritize divergent lateral thinking models
-      const brainstormMatch = availableLocalModels.find(m => /ministral|fable/i.test(m))
-        || availableLocalModels.find(m => /qwen/i.test(m))
-        || availableLocalModels[0];
+      const brainstormMatch = allowed.find(m => /fable/i.test(m))
+        || allowed.find(m => /qwen/i.test(m))
+        || allowed.find(m => /writer/i.test(m))
+        || allowed[0];
 
       return {
         modelName: brainstormMatch,
@@ -122,8 +130,8 @@ export function resolveModelForTask(
 
     default:
       return {
-        modelName: availableLocalModels[0],
-        routingReason: `Auto-routed to ${availableLocalModels[0]}`,
+        modelName: allowed[0],
+        routingReason: `Auto-routed to ${allowed[0]}`,
         isAuto: true
       };
   }

@@ -36,8 +36,10 @@ export async function checkOllamaConnection(baseUrl = 'http://localhost:11434'):
       const filtered: OllamaModelDetail[] = rawList
         .filter((m: RawOllamaModel) => {
           const caps = m.capabilities || [];
-          // Filter out pure embedding models
-          return !caps.includes('embedding') || caps.includes('completion');
+          // Filter out pure embedding models and exempt models (granite, ministral)
+          const isNotEmbedding = !caps.includes('embedding') || caps.includes('completion');
+          const isAllowedModel = !/granite|ministral/i.test(m.name);
+          return isNotEmbedding && isAllowedModel;
         })
         .map((m: RawOllamaModel) => {
           const name = m.name;
@@ -91,8 +93,10 @@ export async function requestOllamaCompletion(
         system: systemPrompt,
         stream: false,
         options: {
-          temperature: 0.7,
+          temperature: 0.75,
           top_p: 0.9,
+          repeat_penalty: 1.22,
+          num_predict: 400,
         }
       }),
       signal: controller.signal
@@ -121,21 +125,42 @@ export function parseOptionsFromAI(raw: string, fallbackSubject = 'The character
   // 1. Remove thinking model reasoning blocks (<think>...</think>) from Qwen, Fable, DeepSeek
   let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-  // 2. Remove markdown bold option labels like **Option 1:** or Option 1:
+  // 2. Remove conversational headers/intros
+  cleaned = cleaned.replace(/^(here are|here is|okay,|sure|certainly|i hope|to help me|what are|below are|as requested)[^\n]*\n+/i, '').trim();
+
+  // 3. Remove markdown bold option labels like **Option 1:** or Option 1:
   cleaned = cleaned
     .replace(/\*\*(Option|Choice|Variation)\s*\d+[^:]*:\*\*/gi, '')
     .replace(/(Option|Choice|Variation)\s*\d+[^:]*:/gi, '');
 
-  const lines = cleaned.split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    // Filter out conversational questions or introductions
-    .filter(line => !/^(here are|here is|okay,|sure|certainly|i hope|to help me|what are|what kind|below are|as requested)/i.test(line));
+  // 4. Split by numbered markers (e.g. 1., 2., 3. or **1.**, **2.**)
+  const regexNumbered = /(?:^|\n+)(?:\*{0,2}\d+[.:)]\*{0,2}|[-*•])\s+/g;
+  const parts = cleaned.split(regexNumbered).map(p => p.trim()).filter(Boolean);
 
   const options: string[] = [];
+  if (parts.length > 1) {
+    for (const part of parts) {
+      const cleanPart = part
+        .replace(/^["']|["']$/g, '')
+        .replace(/\n+/g, ' ')
+        .trim();
+      if (cleanPart.length > 20 && !/^(here are|i hope|let me know)/i.test(cleanPart)) {
+        options.push(cleanPart);
+      }
+    }
+  }
+
+  if (options.length > 0) {
+    return options.slice(0, 3);
+  }
+
+  // Fallback to line-based parsing
+  const lines = cleaned.split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => !/^(here are|here is|okay,|sure|certainly|i hope|to help me|what are|what kind|below are|as requested)/i.test(line));
 
   for (const line of lines) {
-    // Clean leading numbers, bold numbers, dashes, quotes (e.g. **1.**, **1:**, 1., 1), - )
     const stripped = line
       .replace(/^\*?\*?\d+[.:)]\*?\*?\s*/, '')
       .replace(/^[-*•]\s*/, '')
@@ -151,9 +176,8 @@ export function parseOptionsFromAI(raw: string, fallbackSubject = 'The character
     return options.slice(0, 3);
   }
 
-  // If a single paragraph was returned without numbering
   if (cleaned.length > 15) {
-    return [cleaned.replace(/^["']|["']$/g, '')];
+    return [cleaned.replace(/^["']|["']$/g, '').trim()];
   }
 
   return [

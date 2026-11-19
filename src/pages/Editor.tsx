@@ -9,9 +9,15 @@ import { parseSkillMarkdown } from '../lib/skillParser';
 
 interface EditorHandle {
   getText: () => string;
+  getHTML: () => string;
+  state?: {
+    selection?: { from: number; to: number };
+    doc?: { textBetween: (from: number, to: number) => string };
+  };
   commands: {
     focus: (position?: string) => void;
     insertContent: (content: string) => void;
+    setContent: (content: string) => void;
   };
 }
 
@@ -24,17 +30,21 @@ export const Editor: React.FC = () => {
     generationMode,
     setContinuationSuggestions,
     setIsSuggestionsCardOpen,
+    suggestionTaskType,
+    setSuggestionTaskType,
     activeChapterTitle,
     activeProjectTitle
   } = useInkFlowStore();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [brainstormIdeas, setBrainstormIdeas] = useState<string[]>([]);
+  const [activeTask, setActiveTask] = useState<string | null>(null);
   const editorInstanceRef = useRef<EditorHandle | null>(null);
 
-  // Execute dynamic AI action using real Ollama inference and manuscript context
-  const handleAIAction = async (task: 'continue' | 'rewrite' | 'expand' | 'brainstorm', instruction?: string) => {
+  // Execute dynamic AI action reading directly from the manuscript
+  const handleAIAction = async (task: 'continue' | 'rewrite' | 'expand' | 'brainstorm', customDirective?: string) => {
     setIsLoading(true);
+    setActiveTask(task);
+    setSuggestionTaskType(task);
 
     const routing = resolveModelForTask(selectedModel, task, availableModels);
     const parsedSkill = parseSkillMarkdown(activeSkillMarkdown);
@@ -49,54 +59,90 @@ export const Editor: React.FC = () => {
       !p.includes('~ inkFlow Studio ~')
     );
 
+    // Check if user has an active text selection in the editor
+    let selectedText = '';
+    if (editorInstanceRef.current?.state?.selection && editorInstanceRef.current?.state?.doc) {
+      const { from, to } = editorInstanceRef.current.state.selection;
+      if (to > from) {
+        selectedText = editorInstanceRef.current.state.doc.textBetween(from, to).trim();
+      }
+    }
+
     const isNewDraft = realParagraphs.length === 0;
-    const lastExcerpt = realParagraphs.slice(-3).join('\n\n');
+    const lastExcerpt = selectedText || realParagraphs.slice(-3).join('\n\n');
 
     // Prompt construction tailored to Ollama completion
     let prompt = '';
     if (isNewDraft) {
       if (task === 'continue') {
-        prompt = `Project / Collection: "${activeProjectTitle}"
+        if (generationMode === 'write-for-me') {
+          prompt = `Project / Collection: "${activeProjectTitle}"
 Story Title: "${activeChapterTitle}"
-${instruction ? `Writer directive: ${instruction}` : ''}
+${customDirective ? `Directive: ${customDirective}` : ''}
 
-Task: Write the opening of this story. Suggest 2 to 3 distinct, evocative opening sentences or opening paragraphs to begin "${activeChapterTitle}".
-Formatting: Provide each option on a new line starting with 1., 2., 3. Output only narrative prose without conversational remarks.`;
+Task: Write a complete, evocative opening narrative paragraph (around 80 to 140 words) that immediately establishes the mood, sensory setting, and opening tension of this story.
+CRITICAL: Output ONLY the story paragraph itself. Do NOT include meta-commentary, introductory remarks, quotes, or labels.`;
+        } else {
+          prompt = `Project / Collection: "${activeProjectTitle}"
+Story Title: "${activeChapterTitle}"
+${customDirective ? `Directive: ${customDirective}` : ''}
+
+Task: Write 2 to 3 distinct, evocative opening paragraph options (each around 50 to 90 words) to begin "${activeChapterTitle}".
+Formatting: Number each option 1., 2., 3. on separate lines. Output only narrative prose without conversational remarks.`;
+        }
       } else if (task === 'brainstorm') {
         prompt = `Project / Collection: "${activeProjectTitle}"
 Story Title: "${activeChapterTitle}"
-${instruction ? `Writer directive: ${instruction}` : ''}
+${customDirective ? `Directive: ${customDirective}` : ''}
 
-Task: Suggest 4 imaginative premise ideas, twists, or narrative directions for this story ("${activeChapterTitle}").
-Formatting: Output each idea on a separate line starting with '- '.`;
+Task: Suggest 4 imaginative premise ideas, plot hooks, or narrative directions for this story ("${activeChapterTitle}").
+Formatting: Output each idea on a separate line starting with '- '. Be concise, vivid, and distinct.`;
       } else {
         prompt = `Story Title: "${activeChapterTitle}"
 Collection: "${activeProjectTitle}"
-${instruction ? `Writer directive: ${instruction}` : ''}
 Task: Suggest 2 to 3 rich opening variations for "${activeChapterTitle}".
 Formatting: Number each variation 1., 2., 3.`;
       }
     } else {
       if (task === 'continue') {
-        prompt = `Story Title: "${activeChapterTitle}"
+        if (generationMode === 'write-for-me') {
+          prompt = `Project: "${activeProjectTitle}"
+Story Title: "${activeChapterTitle}"
+Existing manuscript context:
+"""
+${lastExcerpt}
+"""
+${customDirective ? `Directive: ${customDirective}` : ''}
+
+Task: Continue the story seamlessly from the exact point where the manuscript text ends. Write a full, immersive narrative paragraph (around 80 to 150 words) developing the immediate action and character perspective.
+CRITICAL RULES:
+1. NEVER repeat or summarize any words or sentences from the existing manuscript above.
+2. Advance the narrative forward with new developments.
+3. Output ONLY narrative prose for the new paragraph. No conversational remarks or quotes.`;
+        } else {
+          prompt = `Story Title: "${activeChapterTitle}"
 Collection: "${activeProjectTitle}"
 Recent manuscript context:
 """
 ${lastExcerpt}
 """
-${instruction ? `Writer directive: ${instruction}` : ''}
+${customDirective ? `Directive: ${customDirective}` : ''}
 
-Task: Suggest 2 to 3 concise, distinct narrative continuation options for what happens next in this scene.
-Formatting: Provide each option on a new line starting with 1., 2., 3. Output only story prose without conversational remarks.`;
+Task: Suggest 2 to 3 distinct, compelling narrative continuation paragraphs (each around 50 to 90 words) for what happens next in this scene.
+CRITICAL RULES:
+1. NEVER repeat or echo sentences from the existing manuscript.
+2. Provide each option on a new line starting with 1., 2., 3.
+3. Output only story prose without conversational remarks.`;
+        }
       } else if (task === 'rewrite') {
         prompt = `Story Title: "${activeChapterTitle}"
 Manuscript passage to revise:
 """
 ${lastExcerpt}
 """
-${instruction ? `Writer directive: ${instruction}` : 'Improve rhythm, sensory precision, and emotional resonance.'}
+${customDirective ? `Directive: ${customDirective}` : 'Improve rhythm, sensory precision, and emotional resonance.'}
 
-Task: Provide 2 to 3 alternative rewritten variations.
+Task: Provide 2 to 3 alternative rewritten variations of this passage.
 Formatting: Number each variation 1., 2., 3. Output only the revised prose.`;
       } else if (task === 'expand') {
         prompt = `Story Title: "${activeChapterTitle}"
@@ -104,9 +150,9 @@ Manuscript passage to expand:
 """
 ${lastExcerpt}
 """
-${instruction ? `Writer directive: ${instruction}` : 'Add tactile sensory details, atmosphere, and character body language.'}
+${customDirective ? `Directive: ${customDirective}` : 'Add tactile sensory details, atmosphere, and character body language.'}
 
-Task: Provide 2 expanded variations that deepen the scene. Number each 1., 2.`;
+Task: Provide 2 expanded variations that deepen the scene with sensory immersion. Number each 1., 2.`;
       } else if (task === 'brainstorm') {
         prompt = `Project: "${activeProjectTitle}"
 Story: "${activeChapterTitle}"
@@ -114,9 +160,9 @@ Current passage:
 """
 ${lastExcerpt}
 """
-${instruction ? `Writer directive: ${instruction}` : ''}
+${customDirective ? `Directive: ${customDirective}` : ''}
 
-Task: List 4 distinct, imaginative plot developments, conflict twists, or scene directions.
+Task: List 4 distinct, imaginative plot developments, conflict twists, or scene directions for what could happen next.
 Formatting: Output each idea on a separate line starting with '- '.`;
       }
     }
@@ -130,33 +176,55 @@ Formatting: Output each idea on a separate line starting with '- '.`;
 
       if (rawResponse) {
         if (task === 'brainstorm') {
+          // Brainstorm: extract 3-4 clean ideas and display them directly in the editor!
           const lines = rawResponse
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
             .split('\n')
             .map(l => l.replace(/^[-*•\d.]+\s*/, '').trim())
-            .filter(l => l.length > 10)
+            .filter(l => l.length > 15 && !/^(here are|below are|i hope)/i.test(l))
             .slice(0, 4);
 
-          setBrainstormIdeas(lines.length > 0 ? lines : [
+          const finalIdeas = lines.length > 0 ? lines : [
             `Introduce an unforeseen arrival that challenges the assumptions in ${activeChapterTitle}.`,
             `Reveal a hidden artifact or letter connecting to the central mystery.`,
             `Subvert expectations by having the ambient silence broken by an urgent summons.`
-          ]);
-        } else {
-          const options = parseOptionsFromAI(rawResponse, activeProjectTitle);
+          ];
 
-          if (generationMode === 'write-for-me' && task === 'continue' && editorInstanceRef.current) {
-            // Direct insertion mode
-            const chosenText = options[0] || rawResponse;
-            editorInstanceRef.current.commands.focus('end');
-            editorInstanceRef.current.commands.insertContent(` ${chosenText}`);
-          } else {
-            // Suggestion mode: present options for writer review
-            setContinuationSuggestions(options);
-            setIsSuggestionsCardOpen(true);
+          setContinuationSuggestions(finalIdeas);
+          setIsSuggestionsCardOpen(true);
+        } else if (generationMode === 'write-for-me' && task === 'continue' && editorInstanceRef.current) {
+          // Write for me mode: writes a full narrative paragraph directly into the editor
+          const cleanParagraph = rawResponse
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/^["']|["']$/g, '')
+            .replace(/^(here is|here's|certainly|sure)[^\n]*\n+/i, '')
+            .trim();
+
+          // Strip any overlapping text
+          const existing = editorInstanceRef.current.getText().trim();
+          let insertText = cleanParagraph;
+          const existingWords = existing.split(/\s+/);
+          const newWords = insertText.split(/\s+/);
+          for (let len = Math.min(existingWords.length, newWords.length, 14); len >= 3; len--) {
+            const tail = existingWords.slice(-len).join(' ').toLowerCase();
+            const head = newWords.slice(0, len).join(' ').toLowerCase();
+            if (tail === head) {
+              insertText = newWords.slice(len).join(' ').trim();
+              break;
+            }
           }
+
+          if (insertText) {
+            editorInstanceRef.current.commands.focus('end');
+            editorInstanceRef.current.commands.insertContent(`<p>${insertText}</p>`);
+          }
+        } else {
+          // Suggestion mode (Continue, Rewrite, Expand): present options in the editor
+          const options = parseOptionsFromAI(rawResponse, activeProjectTitle);
+          setContinuationSuggestions(options);
+          setIsSuggestionsCardOpen(true);
         }
       } else {
-        // Dynamic contextual fallback based on user's actual document words
         generateContextualFallback(task, lastExcerpt);
       }
     } catch {
@@ -164,28 +232,37 @@ Formatting: Output each idea on a separate line starting with '- '.`;
     }
 
     setIsLoading(false);
+    setActiveTask(null);
   };
 
   const generateContextualFallback = (task: string, lastExcerpt: string) => {
     const words = lastExcerpt.split(/\s+/).slice(-8).join(' ');
     if (task === 'brainstorm') {
-      setBrainstormIdeas([
-        `An unexpected observation related to "${words}" changes the stakes.`,
+      setContinuationSuggestions([
+        `An unexpected observation related to "${words}" changes the stakes entirely.`,
         `A secondary character questions the certainty of the current direction.`,
         `The atmosphere shifts as an external signal demands an immediate choice.`
       ]);
+      setIsSuggestionsCardOpen(true);
     } else {
       setContinuationSuggestions([
-        `Taking a measured breath, the silence following "${words}" stretched into a quiet realization.`,
-        `Every detail in the room seemed to sharpen as the moment demanded a decisive step forward.`,
-        `Looking toward the shadowed threshold, it became clear that returning was no longer an option.`
+        `Taking a measured breath, the silence following "${words}" stretched into a quiet realization. Every detail in the room seemed to sharpen as the moment demanded a decisive step forward.`,
+        `Looking toward the shadowed threshold, it became clear that returning was no longer an option. The cold night air carried with it the distant murmur of something stirring in the valley below.`
       ]);
       setIsSuggestionsCardOpen(true);
     }
   };
 
   const handleTryAnother = () => {
-    handleAIAction('continue');
+    const currentTask = suggestionTaskType || 'continue';
+    handleAIAction(currentTask);
+  };
+
+  const handleAcceptSuggestion = (text: string) => {
+    if (suggestionTaskType === 'brainstorm') {
+      // User clicked "Draft from this Idea": write a full paragraph exploring that idea directly in the editor!
+      handleAIAction('continue', `Develop this creative direction: ${text}`);
+    }
   };
 
   return (
@@ -195,7 +272,7 @@ Formatting: Output each idea on a separate line starting with '- '.`;
 
       {/* Center Hero: Manuscript Editor */}
       <ManuscriptEditor 
-        onAcceptSuggestion={() => {}}
+        onAcceptSuggestion={handleAcceptSuggestion}
         onTryAnotherSuggestion={handleTryAnother}
         onEditorReady={(instance) => {
           editorInstanceRef.current = instance as EditorHandle;
@@ -205,12 +282,12 @@ Formatting: Output each idea on a separate line starting with '- '.`;
       {/* Right Column: AI Writing Partner (hidden in focus mode) */}
       {!isFocusMode && (
         <AIPartner 
-          onContinue={(inst) => handleAIAction('continue', inst)}
-          onRewrite={(inst) => handleAIAction('rewrite', inst)}
-          onExpand={(inst) => handleAIAction('expand', inst)}
-          onBrainstorm={(inst) => handleAIAction('brainstorm', inst)}
+          onContinue={() => handleAIAction('continue')}
+          onRewrite={() => handleAIAction('rewrite')}
+          onExpand={() => handleAIAction('expand')}
+          onBrainstorm={() => handleAIAction('brainstorm')}
           isLoading={isLoading}
-          brainstormIdeas={brainstormIdeas}
+          activeTask={activeTask}
         />
       )}
     </div>

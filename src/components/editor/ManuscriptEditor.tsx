@@ -24,6 +24,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     activeChapterTitle, 
     setActiveChapterTitle,
     activeDocumentType,
+    suggestionTaskType,
+    dismissSuggestions,
     updateEditorStats, 
     setSaveStatus 
   } = useInkFlowStore();
@@ -129,9 +131,44 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   // Insert accepted suggestion into the document
   const handleAccept = (text: string) => {
     if (editor) {
-      editor.commands.focus('end');
-      editor.commands.insertContent(` ${text}`);
+      if (suggestionTaskType === 'brainstorm') {
+        dismissSuggestions();
+        onAcceptSuggestion(text);
+        return;
+      }
+
+      if (suggestionTaskType === 'rewrite') {
+        const { from, to } = editor.state.selection;
+        if (to > from) {
+          editor.commands.insertContent(text);
+        } else {
+          editor.commands.focus('end');
+          editor.commands.insertContent(`<p>${text}</p>`);
+        }
+      } else {
+        // Continue or expand: prevent duplicate words & insert as clean paragraph
+        const existing = editor.getText().trim();
+        let cleanText = text.trim();
+
+        // Check and strip any overlapping head/tail words between existing manuscript and new text
+        const existingWords = existing.split(/\s+/);
+        const newWords = cleanText.split(/\s+/);
+        for (let len = Math.min(existingWords.length, newWords.length, 14); len >= 3; len--) {
+          const tail = existingWords.slice(-len).join(' ').toLowerCase();
+          const head = newWords.slice(0, len).join(' ').toLowerCase();
+          if (tail === head) {
+            cleanText = newWords.slice(len).join(' ').trim();
+            break;
+          }
+        }
+
+        if (cleanText) {
+          editor.commands.focus('end');
+          editor.commands.insertContent(`<p>${cleanText}</p>`);
+        }
+      }
     }
+    dismissSuggestions();
     onAcceptSuggestion(text);
   };
 
