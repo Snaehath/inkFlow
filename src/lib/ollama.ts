@@ -81,7 +81,7 @@ export async function requestOllamaCompletion(
 ): Promise<string> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000); // Allow sufficient time for local inference
+    const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout for local model warm-up and generation
     const res = await fetch(`${baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -118,8 +118,11 @@ export async function requestOllamaCompletion(
 export function parseOptionsFromAI(raw: string, fallbackSubject = 'The character'): string[] {
   if (!raw) return [];
 
-  // Remove markdown headers or bold option labels like **Option 1:** or Option 1:
-  const cleaned = raw
+  // 1. Remove thinking model reasoning blocks (<think>...</think>) from Qwen, Fable, DeepSeek
+  let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // 2. Remove markdown bold option labels like **Option 1:** or Option 1:
+  cleaned = cleaned
     .replace(/\*\*(Option|Choice|Variation)\s*\d+[^:]*:\*\*/gi, '')
     .replace(/(Option|Choice|Variation)\s*\d+[^:]*:/gi, '');
 
@@ -127,14 +130,14 @@ export function parseOptionsFromAI(raw: string, fallbackSubject = 'The character
     .map(line => line.trim())
     .filter(Boolean)
     // Filter out conversational questions or introductions
-    .filter(line => !/^(here are|okay,|sure|certainly|i hope|to help me|what are|what kind)/i.test(line));
+    .filter(line => !/^(here are|here is|okay,|sure|certainly|i hope|to help me|what are|what kind|below are|as requested)/i.test(line));
 
   const options: string[] = [];
 
   for (const line of lines) {
-    // Clean leading numbers, dashes, quotes
+    // Clean leading numbers, bold numbers, dashes, quotes (e.g. **1.**, **1:**, 1., 1), - )
     const stripped = line
-      .replace(/^\d+[.)]\s*/, '')
+      .replace(/^\*?\*?\d+[.:)]\*?\*?\s*/, '')
       .replace(/^[-*•]\s*/, '')
       .replace(/^["']|["']$/g, '')
       .trim();
@@ -149,8 +152,8 @@ export function parseOptionsFromAI(raw: string, fallbackSubject = 'The character
   }
 
   // If a single paragraph was returned without numbering
-  if (raw.trim().length > 15) {
-    return [raw.trim().replace(/^["']|["']$/g, '')];
+  if (cleaned.length > 15) {
+    return [cleaned.replace(/^["']|["']$/g, '')];
   }
 
   return [

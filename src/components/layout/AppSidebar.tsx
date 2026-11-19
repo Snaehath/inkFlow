@@ -89,8 +89,8 @@ export const AppSidebar: React.FC = () => {
           onClick={() => setCurrentScreen('studio')}
           className="text-left group flex items-center gap-1.5 focus:outline-none cursor-pointer"
         >
-          <span className="font-serif font-bold text-2xl tracking-tight text-[#25251F] group-hover:text-[#181814] transition-colors">
-            inkFlow
+          <span className="font-serif font-bold text-2xl tracking-tight text-[#25251F] group-hover:text-[#181814] transition-colors inline-flex items-center">
+            inkFlow<span className="inline-block w-2.5 h-2.5 rounded-full bg-[#C77B5B] ml-1.5 mb-0.5" />
           </span>
         </button>
       </div>

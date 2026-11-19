@@ -5,6 +5,16 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 export const SkillLibrary: React.FC = () => {
   const { 
@@ -16,6 +26,7 @@ export const SkillLibrary: React.FC = () => {
   } = useInkFlowStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [skillToDelete, setSkillToDelete] = useState<string | null>(null);
 
   const filteredSkills = savedSkills.filter((s) => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -23,10 +34,16 @@ export const SkillLibrary: React.FC = () => {
     s.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (savedSkills.length <= 1) return; // Keep at least one skill
-    deleteSkill(id);
+    setSkillToDelete(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (skillToDelete) {
+      deleteSkill(skillToDelete);
+      setSkillToDelete(null);
+    }
   };
 
   return (
@@ -90,15 +107,13 @@ export const SkillLibrary: React.FC = () => {
                     </span>
                   )}
 
-                  {savedSkills.length > 1 && (
-                    <button
-                      onClick={(e) => handleDelete(e, skill.id)}
-                      title="Delete skill template"
-                      className="opacity-0 group-hover:opacity-100 p-1 text-[#8A847A] hover:text-[#C77B5B] rounded transition-opacity cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => handleDeleteClick(e, skill.id)}
+                    title="Delete skill template"
+                    className="p-1 text-[#9E988D] hover:text-[#C77B5B] hover:bg-black/5 rounded transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
 
@@ -127,6 +142,31 @@ export const SkillLibrary: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!skillToDelete} onOpenChange={(open) => !open && setSkillToDelete(null)}>
+        <AlertDialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-sm shadow-xl text-[#25251F]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-lg font-bold text-[#25251F]">
+              Delete Skill?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-[#6B655A] leading-relaxed">
+              Are you sure you want to delete this writing skill? If deleted, inkFlow will revert to the default creative partner instructions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex gap-2 justify-end bg-transparent border-none p-0">
+            <AlertDialogCancel className="rounded-xl px-3.5 py-2 text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] border border-[#D5CEC2] cursor-pointer">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="rounded-xl px-4 py-2 bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold cursor-pointer"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 };

@@ -28,6 +28,7 @@ export const ChapterNavigator: React.FC = () => {
   } = useInkFlowStore();
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [projectGenre, setProjectGenre] = useState<string>('Novel');
 
   // Load real chapters for active project from Dexie
   const loadProjectChapters = useCallback(async () => {
@@ -35,6 +36,8 @@ export const ChapterNavigator: React.FC = () => {
     try {
       const list = await db.chapters.where('projectId').equals(activeProjectId).sortBy('order');
       setChapters(list);
+      const proj = await db.projects.get(activeProjectId);
+      if (proj) setProjectGenre(proj.genre || 'Novel');
     } catch (err) {
       console.warn('Failed to load chapters from Dexie:', err);
     }
@@ -42,14 +45,33 @@ export const ChapterNavigator: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    db.chapters.where('projectId').equals(activeProjectId).sortBy('order').then((list) => {
-      if (isMounted) setChapters(list);
-    }).catch(() => {});
+    if (!activeProjectId) return;
+
+    db.chapters.where('projectId').equals(activeProjectId).sortBy('order')
+      .then(async (list) => {
+        if (!isMounted) return;
+        setChapters(list);
+        const proj = await db.projects.get(activeProjectId);
+        if (proj && isMounted) {
+          setProjectGenre(proj.genre || 'Novel');
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load chapters from Dexie:', err);
+      });
 
     return () => {
       isMounted = false;
     };
   }, [activeProjectId]);
+
+  const isStoryCollection = /story|collection|anthology/i.test(projectGenre);
+  const isEpisode = /series|show/i.test(projectGenre);
+  const isBlog = /blog|essay|article/i.test(projectGenre);
+
+  const unitLabel = isStoryCollection ? 'Stories' : isEpisode ? 'Episodes' : isBlog ? 'Posts' : 'Chapters';
+  const singularLabel = isStoryCollection ? 'story' : isEpisode ? 'episode' : isBlog ? 'post' : 'chapter';
+  const prefix = isStoryCollection ? 'Story' : isEpisode ? 'Episode' : isBlog ? 'Post' : 'Chapter';
 
   const handleSelectChapter = async (chapter: Chapter) => {
     setActiveChapterId(chapter.id);
@@ -85,7 +107,7 @@ export const ChapterNavigator: React.FC = () => {
     const nextOrder = chapters.length + 1;
     const formattedNumber = nextOrder < 10 ? `0${nextOrder}` : `${nextOrder}`;
     const chapterId = generateEntityId('ch');
-    const newTitle = `Chapter ${formattedNumber} — Untitled`;
+    const newTitle = `${prefix} ${formattedNumber} — Untitled`;
     const now = getCurrentTimestamp();
 
     const newChapter: Chapter = {
@@ -142,10 +164,10 @@ export const ChapterNavigator: React.FC = () => {
         </div>
       </div>
 
-      {/* Dynamic Chapters List */}
+      {/* Dynamic Chapters / Stories List */}
       <div className="flex-1 p-3 space-y-1 text-xs">
         <div className="text-[10px] font-semibold uppercase tracking-wider text-[#8A847A] px-2 mb-2 flex items-center justify-between">
-          <span>Chapters</span>
+          <span>{unitLabel}</span>
           <span className="font-mono">{chapters.length}</span>
         </div>
 
@@ -169,7 +191,7 @@ export const ChapterNavigator: React.FC = () => {
               {chapters.length > 1 && (
                 <button
                   onClick={(e) => handleDeleteChapter(e, ch.id)}
-                  title="Delete chapter"
+                  title={`Delete ${singularLabel}`}
                   className="opacity-0 group-hover:opacity-100 p-1 text-[#8A847A] hover:text-[#C77B5B] rounded transition-opacity"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -180,14 +202,14 @@ export const ChapterNavigator: React.FC = () => {
         })}
       </div>
 
-      {/* Add Chapter Button */}
+      {/* Add Chapter / Story Button */}
       <div className="p-3 border-t border-[#E8E2D7]">
         <button
           onClick={handleAddChapter}
           className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-dashed border-[#CFC7B9] text-xs font-medium text-[#6B665C] hover:bg-[#EAE4D7] hover:text-[#25251F] hover:border-[#B5AC9C] transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Add chapter</span>
+          <span>Add {singularLabel}</span>
         </button>
       </div>
     </aside>

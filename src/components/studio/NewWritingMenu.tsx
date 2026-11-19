@@ -53,7 +53,7 @@ export const NewWritingMenu: React.FC = () => {
       label: 'Short story', 
       icon: FileText, 
       defaultTitle: 'Untitled Short Story', 
-      defaultChapter: 'Draft',
+      defaultChapter: 'Story 01 — Untitled',
       description: 'Single-scene or standalone tale'
     },
     { 

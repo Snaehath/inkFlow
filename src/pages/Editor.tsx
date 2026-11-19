@@ -39,40 +39,86 @@ export const Editor: React.FC = () => {
     const routing = resolveModelForTask(selectedModel, task, availableModels);
     const parsedSkill = parseSkillMarkdown(activeSkillMarkdown);
 
-    // Extract current actual text from editor
+    // Extract current actual text from editor, filtering out any boilerplate placeholder
     const currentFullText = editorInstanceRef.current ? editorInstanceRef.current.getText() : '';
-    const paragraphs = currentFullText.split(/\n+/).filter(Boolean);
-    const lastExcerpt = paragraphs.slice(-2).join(' ') || `Title: ${activeProjectTitle} — ${activeChapterTitle}`;
+    const rawParagraphs = currentFullText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+    const realParagraphs = rawParagraphs.filter(p => 
+      !p.includes('Section Objective:') &&
+      !p.includes('Begin drafting your scene') &&
+      !p.includes('Use Continue or Brainstorm') &&
+      !p.includes('~ inkFlow Studio ~')
+    );
+
+    const isNewDraft = realParagraphs.length === 0;
+    const lastExcerpt = realParagraphs.slice(-3).join('\n\n');
 
     // Prompt construction tailored to Ollama completion
     let prompt = '';
-    if (task === 'continue') {
-      prompt = `Manuscript context:
-"${lastExcerpt}"
-
+    if (isNewDraft) {
+      if (task === 'continue') {
+        prompt = `Project / Collection: "${activeProjectTitle}"
+Story Title: "${activeChapterTitle}"
 ${instruction ? `Writer directive: ${instruction}` : ''}
+
+Task: Write the opening of this story. Suggest 2 to 3 distinct, evocative opening sentences or opening paragraphs to begin "${activeChapterTitle}".
+Formatting: Provide each option on a new line starting with 1., 2., 3. Output only narrative prose without conversational remarks.`;
+      } else if (task === 'brainstorm') {
+        prompt = `Project / Collection: "${activeProjectTitle}"
+Story Title: "${activeChapterTitle}"
+${instruction ? `Writer directive: ${instruction}` : ''}
+
+Task: Suggest 4 imaginative premise ideas, twists, or narrative directions for this story ("${activeChapterTitle}").
+Formatting: Output each idea on a separate line starting with '- '.`;
+      } else {
+        prompt = `Story Title: "${activeChapterTitle}"
+Collection: "${activeProjectTitle}"
+${instruction ? `Writer directive: ${instruction}` : ''}
+Task: Suggest 2 to 3 rich opening variations for "${activeChapterTitle}".
+Formatting: Number each variation 1., 2., 3.`;
+      }
+    } else {
+      if (task === 'continue') {
+        prompt = `Story Title: "${activeChapterTitle}"
+Collection: "${activeProjectTitle}"
+Recent manuscript context:
+"""
+${lastExcerpt}
+"""
+${instruction ? `Writer directive: ${instruction}` : ''}
+
 Task: Suggest 2 to 3 concise, distinct narrative continuation options for what happens next in this scene.
-Formatting: Provide each option on a new line starting with 1., 2., 3. Do not include conversational remarks or preambles.`;
-    } else if (task === 'rewrite') {
-      prompt = `Manuscript passage to revise:
-"${lastExcerpt}"
+Formatting: Provide each option on a new line starting with 1., 2., 3. Output only story prose without conversational remarks.`;
+      } else if (task === 'rewrite') {
+        prompt = `Story Title: "${activeChapterTitle}"
+Manuscript passage to revise:
+"""
+${lastExcerpt}
+"""
+${instruction ? `Writer directive: ${instruction}` : 'Improve rhythm, sensory precision, and emotional resonance.'}
 
-${instruction ? `Writer directive: ${instruction}` : 'Improve pacing, sensory precision, and cadence.'}
 Task: Provide 2 to 3 alternative rewritten variations.
-Formatting: Number each variation 1., 2., 3. Output only the revised text.`;
-    } else if (task === 'expand') {
-      prompt = `Manuscript passage to expand:
-"${lastExcerpt}"
+Formatting: Number each variation 1., 2., 3. Output only the revised prose.`;
+      } else if (task === 'expand') {
+        prompt = `Story Title: "${activeChapterTitle}"
+Manuscript passage to expand:
+"""
+${lastExcerpt}
+"""
+${instruction ? `Writer directive: ${instruction}` : 'Add tactile sensory details, atmosphere, and character body language.'}
 
-${instruction ? `Writer directive: ${instruction}` : 'Add tactile sensory details, atmosphere, and environmental context.'}
-Task: Provide 2 expanded variations. Number each 1., 2.`;
-    } else if (task === 'brainstorm') {
-      prompt = `Project: ${activeProjectTitle}
-Chapter: ${activeChapterTitle}
-Current passage: "${lastExcerpt}"
+Task: Provide 2 expanded variations that deepen the scene. Number each 1., 2.`;
+      } else if (task === 'brainstorm') {
+        prompt = `Project: "${activeProjectTitle}"
+Story: "${activeChapterTitle}"
+Current passage:
+"""
+${lastExcerpt}
+"""
+${instruction ? `Writer directive: ${instruction}` : ''}
 
 Task: List 4 distinct, imaginative plot developments, conflict twists, or scene directions.
 Formatting: Output each idea on a separate line starting with '- '.`;
+      }
     }
 
     try {

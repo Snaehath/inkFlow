@@ -8,7 +8,7 @@ import {
   Sparkles, 
   Search, 
   Plus, 
-  Bookmark, 
+  Star, 
   PenTool,
   Loader2,
   ArrowRight
@@ -17,6 +17,7 @@ import { useInkFlowStore } from '../store/useInkFlowStore';
 import { db } from '../storage/DexieStorage';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
 import { requestOllamaCompletion } from '../lib/ollama';
+import { resolveModelForTask } from '../lib/modelRouter';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -50,6 +51,8 @@ interface TemplateCardData {
   description: string;
   category: 'Novel' | 'Short Story' | 'Story' | 'Blog' | 'Email' | 'Article' | 'Other';
   icon: React.FC<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
   tags: string[];
   chapters: Array<{ title: string; prompt: string }>;
 }
@@ -63,7 +66,8 @@ export const Templates: React.FC = () => {
     setActiveChapterTitle,
     setActiveSceneId,
     setActiveDocumentType,
-    selectedModel 
+    selectedModel,
+    availableModels 
   } = useInkFlowStore();
 
   const [activeCategory, setActiveCategory] = useState<string>('All Templates');
@@ -71,6 +75,17 @@ export const Templates: React.FC = () => {
   const [isAIGenerating, setIsAIGenerating] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiIdeaPrompt, setAiIdeaPrompt] = useState('');
+  const [starredIds, setStarredIds] = useState<Set<string>>(new Set(['tmpl-novel', 'tmpl-short-story']));
+
+  const toggleStar = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const builtInTemplates: TemplateCardData[] = [
     {
@@ -79,6 +94,8 @@ export const Templates: React.FC = () => {
       description: 'A complete novel structure with acts, chapters, and scene prompts.',
       category: 'Novel',
       icon: Book,
+      iconBg: 'bg-[#FDF0EB]',
+      iconColor: 'text-[#C77B5B]',
       tags: ['# Story', '# Planning'],
       chapters: [
         { title: 'Act I — The Inciting Incident', prompt: 'Establish protagonist normal world and the disturbance.' },
@@ -92,22 +109,41 @@ export const Templates: React.FC = () => {
     {
       id: 'tmpl-short-story',
       title: 'Short Story',
-      description: 'Write a focused, compelling story with a clear narrative arc.',
+      description: 'Write a focused, compelling story with a clear arc.',
       category: 'Short Story',
       icon: Feather,
+      iconBg: 'bg-[#FDF4EB]',
+      iconColor: 'text-[#C77B5B]',
       tags: ['# Fiction', '# < 5k words'],
       chapters: [
-        { title: 'Scene 01 — Hook & Tension', prompt: 'Begin in media res with an immediate sensory beat.' },
-        { title: 'Scene 02 — The Escalation', prompt: 'Deepen the conflict and force a choice.' },
-        { title: 'Scene 03 — The Echo', prompt: 'Resonant ending that lingers after the final line.' }
+        { title: 'The Complete Story', prompt: 'A single, uninterrupted canvas for your complete standalone short story.' }
+      ]
+    },
+    {
+      id: 'tmpl-story-collection',
+      title: 'Short Story Collection',
+      description: 'An anthology of standalone short stories ("solo stories") where each entry is its own complete tale.',
+      category: 'Story',
+      icon: Layers,
+      iconBg: 'bg-[#EBF2E6]',
+      iconColor: 'text-[#3F5236]',
+      tags: ['# Anthology', '# Solo Stories', '# Fiction'],
+      chapters: [
+        { title: 'Story 01 — The Last Customer', prompt: 'Mystery · Emotional Fiction — An elderly visitor arrives at midnight with a forgotten book and an impossible memory.' },
+        { title: 'Story 02 — The Man Who Borrowed Tomorrow', prompt: 'Sci-Fi · Philosophical Fiction — A mysterious trade of time and the unforeseen consequences of glimpsing the future.' },
+        { title: 'Story 03 — The Elevator That Stopped at Floor 0', prompt: 'Thriller · Supernatural — An office elevator doors open into an impossible childhood home and a voice from the past.' },
+        { title: 'Story 04 — The World\'s Worst Superhero', prompt: 'Comedy · Slice of Life — A minor, seemingly useless superpower proves unexpectedly pivotal when crisis strikes.' },
+        { title: 'Story 05 — The Algorithm That Learned to Lie', prompt: 'Sci-Fi · Psychological Mystery — A predictive AI forecasts its creator\'s demise with only 72 hours remaining.' }
       ]
     },
     {
       id: 'tmpl-blog-post',
       title: 'Blog Post',
-      description: 'Create engaging, well-structured craft and opinion articles.',
+      description: 'Create engaging, well-structured blog articles.',
       category: 'Blog',
       icon: FileText,
+      iconBg: 'bg-[#F4EBF7]',
+      iconColor: 'text-[#7A4E8C]',
       tags: ['# Blog', '# Informative'],
       chapters: [
         { title: 'Introduction — The Paradox Hook', prompt: 'Challenge common assumptions with a punchy opening.' },
@@ -119,9 +155,11 @@ export const Templates: React.FC = () => {
     {
       id: 'tmpl-email',
       title: 'Email',
-      description: 'Write clear and effective emails for any professional or personal purpose.',
+      description: 'Write clear and effective emails for any purpose.',
       category: 'Email',
       icon: Mail,
+      iconBg: 'bg-[#EAF3E6]',
+      iconColor: 'text-[#3F6B38]',
       tags: ['# Professional', '# Personal'],
       chapters: [
         { title: 'Subject & Salutation', prompt: 'Clear intent and warm opening.' },
@@ -135,6 +173,8 @@ export const Templates: React.FC = () => {
       description: 'Build a connected series of stories with a consistent style.',
       category: 'Story',
       icon: Layers,
+      iconBg: 'bg-[#FDF6E2]',
+      iconColor: 'text-[#B37D28]',
       tags: ['# Series', '# Worldbuilding'],
       chapters: [
         { title: 'Episode 01 — The First Encounter', prompt: 'Introduce the world and core dynamic.' },
@@ -148,6 +188,8 @@ export const Templates: React.FC = () => {
       description: 'Describe your writing needs and generate a tailored template.',
       category: 'Other',
       icon: Sparkles,
+      iconBg: 'bg-[#FEF5E7]',
+      iconColor: 'text-[#C27D38]',
       tags: ['# Flexible', '# AI-powered'],
       chapters: [
         { title: 'Part I — The Beginning', prompt: 'Custom prompt defined during generation.' },
@@ -215,8 +257,8 @@ export const Templates: React.FC = () => {
         beats: [{ id: `b-${now}-${i}`, description: ch.prompt, completed: false }],
         charactersPresent: [],
         activePlotThreadIds: [],
-        contentHtml: `<h2>${ch.title}</h2><p><em>Section Objective: ${ch.prompt}</em></p><hr /><p>Begin drafting your scene here. Use <strong>Continue</strong> or <strong>Brainstorm</strong> in the AI Partner panel on the right whenever you want ideas, sensory details, or alternatives.</p>`,
-        wordCount: 38,
+        contentHtml: '',
+        wordCount: 0,
         status: 'empty',
         createdAt: now,
         updatedAt: now,
@@ -248,7 +290,8 @@ Chapter Title | Brief Scene Objective`;
     let generatedOutline: Array<{ title: string; prompt: string }> = [];
 
     try {
-      const response = await requestOllamaCompletion(selectedModel, prompt, systemPrompt);
+      const resolved = resolveModelForTask(selectedModel, 'continue', availableModels);
+      const response = await requestOllamaCompletion(resolved.modelName, prompt, systemPrompt);
       if (response) {
         const lines = response.split('\n').filter(l => l.includes('|'));
         if (lines.length > 0) {
@@ -276,6 +319,8 @@ Chapter Title | Brief Scene Objective`;
       description: `AI-structured template tailored for "${aiIdeaPrompt.slice(0, 60)}..."`,
       category: 'Story',
       icon: Sparkles,
+      iconBg: 'bg-[#FEF5E7]',
+      iconColor: 'text-[#C27D38]',
       tags: ['# AI-Generated', '# Custom'],
       chapters: generatedOutline
     };
@@ -384,30 +429,39 @@ Chapter Title | Brief Scene Objective`;
           <h2 className="font-serif font-bold text-lg text-[#25251F]">
             Popular Templates
           </h2>
-          <span className="text-xs text-[#706B62] font-mono">
-            {filtered.length} {filtered.length === 1 ? 'template' : 'templates'}
-          </span>
+          <button
+            onClick={() => {
+              setActiveCategory('All Templates');
+              setSearchQuery('');
+            }}
+            className="text-xs font-sans text-[#706B62] hover:text-[#25251F] flex items-center gap-1 hover:underline cursor-pointer"
+          >
+            <span>View All</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((tmpl) => {
             const Icon = tmpl.icon;
+            const isStarred = starredIds.has(tmpl.id);
             return (
               <Card
                 key={tmpl.id}
                 onClick={() => handleUseTemplate(tmpl)}
                 className="group bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] hover:border-[#CCD8C2] rounded-2xl p-5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-4 gap-0"
               >
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-[#EFE9DF] group-hover:bg-[#E3DDD0] text-[#524E46] group-hover:text-[#25251F] flex items-center justify-center transition-colors">
+                    <div className={`w-10 h-10 rounded-xl ${tmpl.iconBg} ${tmpl.iconColor} flex items-center justify-center transition-transform group-hover:scale-105`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <button 
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1 text-[#8A847A] hover:text-[#25251F] rounded-lg transition-colors"
+                      onClick={(e) => toggleStar(tmpl.id, e)}
+                      title={isStarred ? "Favorited" : "Favorite template"}
+                      className="p-1 text-[#8A847A] hover:text-[#C77B5B] rounded-lg transition-colors cursor-pointer"
                     >
-                      <Bookmark className="w-4 h-4" />
+                      <Star className={`w-4 h-4 ${isStarred ? 'fill-[#C77B5B] text-[#C77B5B]' : 'text-[#8A847A]'}`} />
                     </button>
                   </div>
 
