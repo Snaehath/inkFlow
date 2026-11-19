@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  /* Warm Paper & Editorial Studio Palette */
+  --ink-paper: #F5F1E9;
+  --ink-card: #FAF7F2;
+  --ink-surface: #F3EFE7;
+  --ink-border: #E3DDD3;
+  --ink-border-subtle: #ECE5DB;
+
+  --ink-text: #25251F;
+  --ink-text-muted: #6E6960;
+  --ink-text-faint: #9C968B;
+
+  --ink-sage: #A7B69A;
+  --ink-sage-dark: #3F5236;
+  --ink-sage-light: #EBF0E6;
+
+  --ink-terracotta: #C77B5B;
+  --ink-terracotta-dark: #A25A3D;
+  --ink-terracotta-light: #FBF0EB;
+
+  --ink-sand: #ECE5D8;
+}
+
+/* Custom Scrollbar - Warm and understated */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9D2C5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #BEB6A7;
+}
+
+/* TipTap Editor Styles - Editorial Serif Manuscript */
+.ProseMirror {
+  outline: none;
+  min-height: 100%;
+  color: #25251F;
+  font-family: 'Newsreader', 'Literata', Georgia, 'Times New Roman', serif;
+  font-size: 1.25rem;
+  line-height: 1.9;
+  letter-spacing: -0.005em;
+}
+
+.ProseMirror p {
+  margin-bottom: 1.35rem;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9C968B;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+}
+
+.ProseMirror h1 {
+  font-family: 'Newsreader', 'Literata', Georgia, serif;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #25251F;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.025em;
+}
+
+.ProseMirror h2 {
+  font-family: 'Newsreader', 'Literata', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #25251F;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror h3 {
+  font-family: 'Newsreader', 'Literata', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #38352F;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #C77B5B;
+  padding-left: 1.25rem;
+  font-style: italic;
+  color: #5E5950;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
