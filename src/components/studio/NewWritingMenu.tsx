@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Book, Library, FileText, Mail, Feather, Sparkles, Loader2, ArrowRight } from 'lucide-react';
+import { Book, Library, FileText, Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { db } from '../../storage/DexieStorage';
 import { Card } from '../ui/card';
@@ -71,22 +71,6 @@ export const NewWritingMenu: React.FC = () => {
       defaultTitle: 'Untitled Short Story', 
       defaultChapter: 'Story 01 — Untitled',
       description: 'Single-scene or standalone tale'
-    },
-    { 
-      type: 'email', 
-      label: 'Email', 
-      icon: Mail, 
-      defaultTitle: 'Email Dispatch', 
-      defaultChapter: 'Draft: Collaboration Note',
-      description: 'Editorial letter, newsletter, or update'
-    },
-    { 
-      type: 'blog', 
-      label: 'Blog', 
-      icon: Feather, 
-      defaultTitle: 'Studio Essay', 
-      defaultChapter: 'Draft Essay',
-      description: 'Article, craft essay, or journal entry'
     },
   ];
 
@@ -178,7 +162,7 @@ export const NewWritingMenu: React.FC = () => {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {writingFormats.map((format) => {
           const Icon = format.icon;
           return (
@@ -201,17 +185,17 @@ export const NewWritingMenu: React.FC = () => {
       {/* Story Planning & Partner Shaping Modal */}
       {selectedFormat && (
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-[#25251F] font-sans">
-            <DialogHeader className="pb-3 border-b border-[#E8E2D7]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B]">
+          <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl sm:max-w-[540px] w-full p-6 shadow-2xl text-[#25251F] font-sans">
+            <DialogHeader className="pb-3 border-b border-[#E8E2D7] pr-10">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B] shrink-0 mt-0.5">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <DialogTitle className="font-serif font-bold text-lg text-[#25251F]">
                     Start New {selectedFormat.label}
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-[#706B62] mt-0.5 font-sans">
+                  <DialogDescription className="text-xs text-[#706B62] mt-1 font-sans leading-relaxed">
                     Tell inkFlow what you are planning to write. AI will craft custom partner rules (tone, sensory details, and pacing) for this story.
                   </DialogDescription>
                 </div>
@@ -228,7 +212,7 @@ export const NewWritingMenu: React.FC = () => {
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   placeholder={`e.g. ${selectedFormat.type === 'short-story' ? 'The Floor 101' : selectedFormat.defaultTitle}`}
-                  className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-[#3F5236]"
+                  className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-1 focus-visible:ring-[#3F5236] focus-visible:border-[#3F5236]"
                 />
               </div>
 
@@ -241,7 +225,7 @@ export const NewWritingMenu: React.FC = () => {
                   value={premisePlan}
                   onChange={(e) => setPremisePlan(e.target.value)}
                   placeholder="e.g. A mystery about a 100-floor Moscow hotel with a secret 101st floor that only a rookie room-service worker can see..."
-                  className="w-full text-xs font-serif p-3 rounded-2xl bg-[#F7F2E8] border border-[#DFD8CC] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:ring-1 focus:ring-[#3F5236] resize-none shadow-2xs leading-relaxed"
+                  className="w-full text-xs font-serif p-3 rounded-2xl bg-[#F7F2E8] border border-[#DFD8CC] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:ring-1 focus:ring-[#3F5236] focus:border-[#3F5236] resize-none shadow-2xs leading-relaxed"
                 />
               </div>
 
@@ -260,7 +244,7 @@ export const NewWritingMenu: React.FC = () => {
                   type="button"
                   onClick={() => executeCreateDraft(true)}
                   disabled={isGenerating}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-xs cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-xs hover:shadow-sm cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {isGenerating ? (
                     <>

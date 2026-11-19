@@ -64,7 +64,7 @@ export const Projects: React.FC = () => {
 
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<'All' | 'Novel' | 'Story' | 'Blog' | 'Series' | 'Other'>('All');
+  const [activeTab, setActiveTab] = useState<'All' | 'Novel' | 'Story' | 'Series' | 'Other'>('All');
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'words'>('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -124,7 +124,6 @@ export const Projects: React.FC = () => {
         const g = p.genre.toLowerCase();
         if (activeTab === 'Novel') return g.includes('novel');
         if (activeTab === 'Story') return g.includes('story') && !g.includes('series');
-        if (activeTab === 'Blog') return g.includes('blog') || g.includes('essay');
         if (activeTab === 'Series') return g.includes('series') || g.includes('collection');
         return true;
       });
@@ -237,9 +236,8 @@ export const Projects: React.FC = () => {
       all: projects.length,
       novels: projects.filter(p => p.genre.toLowerCase().includes('novel')).length,
       stories: projects.filter(p => p.genre.toLowerCase().includes('story') && !p.genre.toLowerCase().includes('series')).length,
-      blogs: projects.filter(p => p.genre.toLowerCase().includes('blog') || p.genre.toLowerCase().includes('essay')).length,
       series: projects.filter(p => p.genre.toLowerCase().includes('series') || p.genre.toLowerCase().includes('collection')).length,
-      others: projects.filter(p => !p.genre.toLowerCase().includes('novel') && !p.genre.toLowerCase().includes('story') && !p.genre.toLowerCase().includes('blog')).length,
+      others: projects.filter(p => !p.genre.toLowerCase().includes('novel') && !p.genre.toLowerCase().includes('story')).length,
     };
   }, [projects]);
 
@@ -300,17 +298,6 @@ export const Projects: React.FC = () => {
             }`}
           >
             Stories <span className="text-[10px] opacity-70 ml-0.5">{tabCounts.stories}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('Blog')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-              activeTab === 'Blog'
-                ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold shadow-2xs'
-                : 'text-[#615C53] hover:bg-[#EAE4D7] hover:text-[#25251F]'
-            }`}
-          >
-            Blogs <span className="text-[10px] opacity-70 ml-0.5">{tabCounts.blogs}</span>
           </button>
 
           <button
@@ -510,8 +497,8 @@ export const Projects: React.FC = () => {
 
       {/* shadcn Dialog: Create New Project */}
       <Dialog open={isNewProjectModalOpen} onOpenChange={setIsNewProjectModalOpen}>
-        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl max-w-md w-full p-6 shadow-xl text-[#25251F]">
-          <DialogHeader className="pb-2 border-b border-[#E8E2D7]">
+        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl sm:max-w-md w-full p-6 shadow-xl text-[#25251F]">
+          <DialogHeader className="pb-2 border-b border-[#E8E2D7] pr-10">
             <DialogTitle className="font-serif font-bold text-lg text-[#25251F]">
               Create New Project
             </DialogTitle>
@@ -547,9 +534,7 @@ export const Projects: React.FC = () => {
                 <option value="Novel">Novel</option>
                 <option value="Short Story">Short Story</option>
                 <option value="Story Collection">Story Collection</option>
-                <option value="Blog Series">Blog Series</option>
-                <option value="Email Series">Email Series</option>
-                <option value="Craft Essays">Craft Essays</option>
+                <option value="Serial Fiction">Serial Fiction</option>
               </select>
             </div>
 

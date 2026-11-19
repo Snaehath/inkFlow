@@ -146,8 +146,8 @@ export const Studio: React.FC = () => {
       'story': 'Story',
       'novel': 'Novel',
       'short-story': 'Short story',
-      'blog': 'Blog',
-      'email': 'Email',
+      'blog': 'Story',
+      'email': 'Story',
     };
 
     const finalTitle = modalTitle.trim() || 'The Floor 101';
@@ -387,17 +387,17 @@ export const Studio: React.FC = () => {
 
       {/* Story Planning & Partner Shaping Modal */}
       <Dialog open={isNewWritingModalOpen} onOpenChange={setIsNewWritingModalOpen}>
-        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-[#25251F] font-sans">
-          <DialogHeader className="pb-3 border-b border-[#E8E2D7]">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B]">
+        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl sm:max-w-[540px] w-full p-6 shadow-2xl text-[#25251F] font-sans">
+          <DialogHeader className="pb-3 border-b border-[#E8E2D7] pr-10">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B] shrink-0 mt-0.5">
                 <Sparkles className="w-4 h-4" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <DialogTitle className="font-serif font-bold text-lg text-[#25251F]">
                   Start New Story
                 </DialogTitle>
-                <DialogDescription className="text-xs text-[#706B62] mt-0.5 font-sans">
+                <DialogDescription className="text-xs text-[#706B62] mt-1 font-sans leading-relaxed">
                   Tell inkFlow what you are planning to write. AI will craft custom partner rules (tone, sensory details, and pacing) for this story.
                 </DialogDescription>
               </div>
@@ -414,7 +414,7 @@ export const Studio: React.FC = () => {
                 value={modalTitle}
                 onChange={(e) => setModalTitle(e.target.value)}
                 placeholder="e.g. The Floor 101"
-                className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-[#3F5236]"
+                className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-1 focus-visible:ring-[#3F5236] focus-visible:border-[#3F5236]"
               />
             </div>
 
@@ -427,14 +427,12 @@ export const Studio: React.FC = () => {
                   { id: 'short-story', label: 'Short Story' },
                   { id: 'story', label: 'Story' },
                   { id: 'novel', label: 'Novel' },
-                  { id: 'blog', label: 'Blog Essay' },
-                  { id: 'email', label: 'Email' }
                 ].map((fmt) => (
                   <button
                     key={fmt.id}
                     type="button"
                     onClick={() => setModalGenre(fmt.id as DocumentType)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                       modalGenre === fmt.id
                         ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold shadow-2xs'
                         : 'bg-[#F2ECE1] text-[#615C53] hover:bg-[#EAE4D7]'
@@ -455,7 +453,7 @@ export const Studio: React.FC = () => {
                 value={modalPremise}
                 onChange={(e) => setModalPremise(e.target.value)}
                 placeholder="e.g. A mystery about a 100-floor Moscow hotel with a secret 101st floor that only a rookie room-service worker can see..."
-                className="w-full text-xs font-serif p-3 rounded-2xl bg-[#F7F2E8] border border-[#DFD8CC] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:ring-1 focus:ring-[#3F5236] resize-none shadow-2xs leading-relaxed"
+                className="w-full text-xs font-serif p-3 rounded-2xl bg-[#F7F2E8] border border-[#DFD8CC] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:ring-1 focus:ring-[#3F5236] focus:border-[#3F5236] resize-none shadow-2xs leading-relaxed"
               />
             </div>
 
@@ -474,7 +472,7 @@ export const Studio: React.FC = () => {
                 type="button"
                 onClick={() => handleConfirmCreateWriting(true)}
                 disabled={isGeneratingPartner}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-xs hover:shadow-sm cursor-pointer disabled:opacity-50 transition-all"
               >
                 {isGeneratingPartner ? (
                   <>

@@ -154,7 +154,7 @@ export const AppSidebar: React.FC = () => {
               Write anything.
             </div>
             <div className="text-[11px] leading-tight text-[#757067] mt-0.5">
-              Stories, novels, emails, blogs and more.
+              Stories, novels, and standalone fiction.
             </div>
           </div>
         </div>

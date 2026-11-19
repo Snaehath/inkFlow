@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { 
   Book, 
   Feather, 
-  FileText, 
-  Mail, 
   Layers, 
   Sparkles, 
   Search, 
@@ -40,8 +38,6 @@ function mapCategoryToDocType(cat: string): DocumentType {
   const c = cat.toLowerCase();
   if (c.includes('novel')) return 'novel';
   if (c.includes('short')) return 'short-story';
-  if (c.includes('email')) return 'email';
-  if (c.includes('blog')) return 'blog';
   return 'story';
 }
 
@@ -49,7 +45,7 @@ interface TemplateCardData {
   id: string;
   title: string;
   description: string;
-  category: 'Novel' | 'Short Story' | 'Story' | 'Blog' | 'Email' | 'Article' | 'Other';
+  category: 'Novel' | 'Short Story' | 'Story' | 'Other';
   icon: React.FC<{ className?: string }>;
   iconBg: string;
   iconColor: string;
@@ -137,37 +133,6 @@ export const Templates: React.FC = () => {
       ]
     },
     {
-      id: 'tmpl-blog-post',
-      title: 'Blog Post',
-      description: 'Create engaging, well-structured blog articles.',
-      category: 'Blog',
-      icon: FileText,
-      iconBg: 'bg-[#F4EBF7]',
-      iconColor: 'text-[#7A4E8C]',
-      tags: ['# Blog', '# Informative'],
-      chapters: [
-        { title: 'Introduction — The Paradox Hook', prompt: 'Challenge common assumptions with a punchy opening.' },
-        { title: 'Section 01 — Core Argument', prompt: 'Lay out the main thesis with real-world examples.' },
-        { title: 'Section 02 — Practical Takeaways', prompt: 'Provide actionable advice for the reader.' },
-        { title: 'Conclusion — The Parting Thought', prompt: 'Summarize with a memorable closing sentence.' }
-      ]
-    },
-    {
-      id: 'tmpl-email',
-      title: 'Email',
-      description: 'Write clear and effective emails for any purpose.',
-      category: 'Email',
-      icon: Mail,
-      iconBg: 'bg-[#EAF3E6]',
-      iconColor: 'text-[#3F6B38]',
-      tags: ['# Professional', '# Personal'],
-      chapters: [
-        { title: 'Subject & Salutation', prompt: 'Clear intent and warm opening.' },
-        { title: 'The Core Request', prompt: 'State the premise and action required.' },
-        { title: 'Context & Next Steps', prompt: 'Polite wrap-up and timeline expectations.' }
-      ]
-    },
-    {
       id: 'tmpl-story-series',
       title: 'Story Series',
       description: 'Build a connected series of stories with a consistent style.',
@@ -199,7 +164,7 @@ export const Templates: React.FC = () => {
     }
   ];
 
-  const categories = ['All Templates', 'Novel', 'Short Story', 'Story', 'Blog', 'Email', 'Article', 'Other'];
+  const categories = ['All Templates', 'Novel', 'Short Story', 'Story', 'Other'];
 
   const filtered = builtInTemplates.filter((tmpl) => {
     const matchCat = activeCategory === 'All Templates' || tmpl.category === activeCategory;

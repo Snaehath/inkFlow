@@ -186,7 +186,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-sans font-semibold tracking-widest text-[#7C776E] uppercase select-none">
-              {activeDocumentType === 'short-story' ? 'SHORT STORY' : activeDocumentType === 'story' ? 'SOLO STORY' : activeDocumentType === 'blog' ? 'DISPATCH / ESSAY' : activeDocumentType === 'email' ? 'EMAIL DRAFT' : 'MANUSCRIPT'}
+              {activeDocumentType === 'short-story' ? 'SHORT STORY' : activeDocumentType === 'story' ? 'SOLO STORY' : 'MANUSCRIPT'}
             </span>
           </div>
 

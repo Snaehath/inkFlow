@@ -78,16 +78,16 @@ const TuneStoryPartnerForm: React.FC<TuneFormProps> = ({
 
   return (
     <>
-      <DialogHeader className="pb-3 border-b border-[#E8E2D7]">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B]">
+      <DialogHeader className="pb-3 border-b border-[#E8E2D7] pr-10">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B] shrink-0 mt-0.5">
             <Sparkles className="w-4 h-4" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <DialogTitle className="font-serif font-bold text-lg text-[#25251F]">
               Tune Writing Partner for this Story
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#706B62] mt-0.5 font-sans">
+            <DialogDescription className="text-xs text-[#706B62] mt-1 font-sans leading-relaxed">
               Tell inkFlow what you are planning to write. AI will craft custom instructions (tone, sensory rules, and suspense) specifically for this story.
             </DialogDescription>
           </div>
@@ -105,7 +105,7 @@ const TuneStoryPartnerForm: React.FC<TuneFormProps> = ({
             value={storyTitle}
             onChange={(e) => setStoryTitle(e.target.value)}
             placeholder="e.g. The Floor 101"
-            className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-[#3F5236]"
+            className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-1 focus-visible:ring-[#3F5236] focus-visible:border-[#3F5236]"
           />
         </div>
 
@@ -204,7 +204,7 @@ export const TuneStoryPartnerDialog: React.FC<TuneStoryPartnerDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-[#25251F] font-sans">
+      <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl sm:max-w-[540px] w-full p-6 shadow-2xl text-[#25251F] font-sans">
         {open && (
           <TuneStoryPartnerForm
             onClose={() => onOpenChange(false)}
