@@ -94,9 +94,10 @@ export async function requestOllamaCompletion(
         system: systemPrompt,
         stream: false,
         options: {
-          temperature: 0.75,
+          temperature: 0.85,
+          min_p: 0.05,
+          repeat_penalty: 1.05,
           top_p: 0.9,
-          repeat_penalty: 1.18,
           num_predict: numPredict,
         }
       }),
