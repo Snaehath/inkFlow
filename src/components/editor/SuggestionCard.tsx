@@ -6,7 +6,8 @@ import {
   Lightbulb, 
   ArrowRight, 
   Maximize2,
-  Sparkles
+  Sparkles,
+  CheckCheck
 } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { Card } from '../ui/card';
@@ -39,6 +40,13 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({ onAccept, onTryA
       subtitle: 'Select a paragraph continuation to advance your scene',
       icon: ArrowRight,
       actionLabel: 'Accept & Insert',
+      actionIcon: Check,
+    },
+    format: {
+      title: 'Format & Fix Passage',
+      subtitle: 'Fixed grammar, spelling, punctuation and sentence cadence',
+      icon: CheckCheck,
+      actionLabel: 'Replace with Formatted Prose',
       actionIcon: Check,
     },
     rewrite: {

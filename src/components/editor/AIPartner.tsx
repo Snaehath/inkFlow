@@ -3,56 +3,71 @@ import {
   RotateCw, 
   Maximize2, 
   Lightbulb, 
-  ArrowRight,
+  ArrowRight, 
+  CheckCheck,
   Loader2,
-  Sparkles
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 import { ModelSelector } from './ModelSelector';
 import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 
 interface AIPartnerProps {
   onContinue: () => void;
+  onFormat: () => void;
   onRewrite: () => void;
   onExpand: () => void;
   onBrainstorm: () => void;
+  onOpenTuneModal: () => void;
   isLoading: boolean;
   activeTask?: string | null;
 }
 
 export const AIPartner: React.FC<AIPartnerProps> = ({
   onContinue,
+  onFormat,
   onRewrite,
   onExpand,
   onBrainstorm,
+  onOpenTuneModal,
   isLoading,
   activeTask,
 }) => {
   const actions = [
     {
       id: 'continue',
-      label: 'Continue',
-      desc: 'Suggest or draft next paragraph',
+      label: 'Continue Story',
+      desc: 'Draft next paragraph from current story',
       icon: ArrowRight,
       onClick: onContinue,
     },
     {
+      id: 'format',
+      label: 'Format & Fix',
+      desc: 'Fix grammar, punctuation & flow of active passage',
+      icon: CheckCheck,
+      onClick: onFormat,
+    },
+    {
       id: 'rewrite',
-      label: 'Rewrite',
-      desc: 'Elevate style of active passage',
+      label: 'Rewrite & Elevate',
+      desc: 'Stylistic literary revision with sensory cadence',
       icon: RotateCw,
       onClick: onRewrite,
     },
     {
       id: 'expand',
-      label: 'Expand',
-      desc: 'Add sensory depth & atmosphere',
+      label: 'Expand Scene',
+      desc: 'Deepen atmosphere, character reactions & details',
       icon: Maximize2,
       onClick: onExpand,
     },
     {
       id: 'brainstorm',
-      label: 'Brainstorm',
-      desc: 'Explore fresh plot ideas & branches',
+      label: 'Brainstorm Turns',
+      desc: 'Explore plot twists & scene developments',
       icon: Lightbulb,
       onClick: onBrainstorm,
     },
@@ -74,13 +89,13 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
           {isLoading && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#EAE3D5] text-[#3F5236] text-[11px] font-medium animate-pulse">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Drafting...</span>
+              <span>Thinking...</span>
             </div>
           )}
         </div>
 
-        {/* 4 Core Interaction Action Cards */}
-        <div className="space-y-2.5">
+        {/* 5 Core Interaction Action Cards */}
+        <div className="space-y-2">
           {actions.map((act) => {
             const Icon = act.icon;
             const isThisActionLoading = isLoading && activeTask === act.id;
@@ -88,7 +103,7 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
               <Card
                 key={act.id}
                 onClick={act.onClick}
-                className={`w-full text-left p-3.5 rounded-2xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] transition-all flex items-start gap-3 group shadow-2xs hover:shadow-xs cursor-pointer ${
+                className={`w-full text-left p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] transition-all flex items-start gap-3 group shadow-2xs hover:shadow-xs cursor-pointer ${
                   isLoading ? 'opacity-55 pointer-events-none' : ''
                 }`}
               >
@@ -113,10 +128,28 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
           })}
         </div>
 
-        {/* Editorial Context Indicator */}
-        <div className="p-3 rounded-xl bg-[#F0EBE0]/60 border border-[#E4DDD0] text-[11px] text-[#736E64] leading-relaxed font-sans">
-          Actions automatically read your current manuscript paragraph or selected passage. Responses appear directly on your canvas.
-        </div>
+        {/* Tune Partner Card: What are you planning to write? */}
+        <Card className="p-3.5 rounded-2xl bg-[#FAF7F2] border-[#DDD5C7] space-y-2.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-serif font-bold text-[#25251F]">
+              <Sparkles className="w-3.5 h-3.5 text-[#C77B5B]" />
+              <span>Story Premise & Partner Tone</span>
+            </div>
+            <Badge variant="outline" className="text-[10px] bg-[#E1EAD9] text-[#2C3E25] border-none px-1.5 py-0.5">
+              Tuned
+            </Badge>
+          </div>
+          <p className="text-[11px] text-[#706B62] leading-snug font-sans">
+            Tell inkFlow what you are planning to write. AI will craft or adapt custom partner rules and tone tailored to this story.
+          </p>
+          <Button
+            onClick={onOpenTuneModal}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-[#FAF7F2] hover:bg-[#F3EFE7] border border-[#DDD5C7] text-xs font-semibold text-[#25251F] shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+          >
+            <Wand2 className="w-3.5 h-3.5 text-[#C77B5B]" />
+            <span>Tune Partner for this Story</span>
+          </Button>
+        </Card>
       </div>
 
       {/* Bottom Controls: Mode Toggle, Model Dropdown, Active Skill */}

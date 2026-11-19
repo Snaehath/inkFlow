@@ -42,7 +42,7 @@ interface InkFlowState {
   continuationSuggestions: string[];
   selectedSuggestionIndex: number;
   isSuggestionsCardOpen: boolean;
-  suggestionTaskType: 'continue' | 'rewrite' | 'expand' | 'brainstorm';
+  suggestionTaskType: 'continue' | 'format' | 'rewrite' | 'expand' | 'brainstorm';
   generationMode: 'suggest' | 'write-for-me';
   modelRoutingMode: 'auto' | 'manual';
 
@@ -94,7 +94,7 @@ interface InkFlowState {
   setContinuationSuggestions: (suggestions: string[]) => void;
   setSelectedSuggestionIndex: (idx: number) => void;
   setIsSuggestionsCardOpen: (open: boolean) => void;
-  setSuggestionTaskType: (type: 'continue' | 'rewrite' | 'expand' | 'brainstorm') => void;
+  setSuggestionTaskType: (type: 'continue' | 'format' | 'rewrite' | 'expand' | 'brainstorm') => void;
   setGenerationMode: (mode: 'suggest' | 'write-for-me') => void;
   setModelRoutingMode: (mode: 'auto' | 'manual') => void;
   dismissSuggestions: () => void;

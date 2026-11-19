@@ -137,13 +137,20 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         return;
       }
 
-      if (suggestionTaskType === 'rewrite') {
+      if (suggestionTaskType === 'format' || suggestionTaskType === 'rewrite') {
         const { from, to } = editor.state.selection;
         if (to > from) {
           editor.commands.insertContent(text);
         } else {
-          editor.commands.focus('end');
-          editor.commands.insertContent(`<p>${text}</p>`);
+          const raw = editor.getText().trim();
+          const paragraphs = raw.split(/\n+/).filter(Boolean);
+          if (paragraphs.length <= 1) {
+            editor.commands.setContent(`<p>${text}</p>`);
+          } else {
+            paragraphs[paragraphs.length - 1] = text;
+            const updatedHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
+            editor.commands.setContent(updatedHtml);
+          }
         }
       } else {
         // Continue or expand: prevent duplicate words & insert as clean paragraph

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, ArrowRight, MoreHorizontal, BookOpen, FolderKanban, RotateCcw } from 'lucide-react';
+import { Plus, ArrowRight, MoreHorizontal, BookOpen, FolderKanban, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
 import { useInkFlowStore } from '../store/useInkFlowStore';
 import { db, resetToCleanDefaults } from '../storage/DexieStorage';
 import { NewWritingMenu } from '../components/studio/NewWritingMenu';
@@ -8,6 +8,7 @@ import { ProjectCards } from '../components/studio/ProjectCards';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -25,6 +26,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import { resolveModelForTask } from '../lib/modelRouter';
+import { generateSkillFromStoryPremise } from '../lib/skillGenerator';
+import type { DocumentType } from '../types';
 
 function createEntityId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -53,12 +65,23 @@ export const Studio: React.FC = () => {
     setActiveChapterId,
     setActiveChapterTitle,
     setActiveSceneId,
-    setActiveDocumentType
+    setActiveDocumentType,
+    selectedModel,
+    availableModels,
+    saveReusableSkill,
+    applySkillToSession
   } = useInkFlowStore();
 
   const [resumeInfo, setResumeInfo] = useState<ResumeCardInfo | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // New Writing Planning Modal State
+  const [isNewWritingModalOpen, setIsNewWritingModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalGenre, setModalGenre] = useState<DocumentType>('short-story');
+  const [modalPremise, setModalPremise] = useState('');
+  const [isGeneratingPartner, setIsGeneratingPartner] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -106,18 +129,49 @@ export const Studio: React.FC = () => {
     setCurrentScreen('editor');
   };
 
-  const handleNewWriting = async () => {
+  const handleOpenNewWritingDialog = () => {
+    setModalTitle('');
+    setModalGenre('short-story');
+    setModalPremise('');
+    setIsNewWritingModalOpen(true);
+  };
+
+  const handleConfirmCreateWriting = async (shapeWithAI = false) => {
     const now = getTimestamp();
     const newProjectId = createEntityId('proj');
     const newChapterId = createEntityId('ch');
     const newSceneId = createEntityId('sc');
 
+    const genreLabelMap: Record<DocumentType, string> = {
+      'story': 'Story',
+      'novel': 'Novel',
+      'short-story': 'Short story',
+      'blog': 'Blog',
+      'email': 'Email',
+    };
+
+    const finalTitle = modalTitle.trim() || 'The Floor 101';
+    const finalChapter = modalGenre === 'short-story' ? finalTitle : `Chapter 01 — ${finalTitle}`;
+
+    if (shapeWithAI && modalPremise.trim()) {
+      setIsGeneratingPartner(true);
+      try {
+        const routing = resolveModelForTask(selectedModel, 'continue', availableModels);
+        const skill = await generateSkillFromStoryPremise(finalTitle, modalPremise.trim(), routing.modelName);
+        saveReusableSkill(skill.title, skill.markdown);
+        applySkillToSession();
+      } catch (err) {
+        console.warn('AI partner generation error:', err);
+      }
+      setIsGeneratingPartner(false);
+    }
+
     await db.projects.add({
       id: newProjectId,
-      title: 'Untitled Draft',
-      genre: 'Story',
-      targetWordCount: 10000,
-      description: 'New creative project',
+      title: finalTitle,
+      genre: genreLabelMap[modalGenre] || 'Short story',
+      targetWordCount: modalGenre === 'novel' ? 60000 : 5000,
+      description: modalPremise.trim() || 'New writing project',
       activeSceneId: newSceneId,
       createdAt: now,
       updatedAt: now,
@@ -126,7 +180,7 @@ export const Studio: React.FC = () => {
     await db.chapters.add({
       id: newChapterId,
       projectId: newProjectId,
-      title: 'Chapter 01',
+      title: finalChapter,
       order: 1,
       createdAt: now,
       updatedAt: now,
@@ -136,7 +190,7 @@ export const Studio: React.FC = () => {
       id: newSceneId,
       chapterId: newChapterId,
       projectId: newProjectId,
-      title: 'Chapter 01',
+      title: finalChapter,
       order: 1,
       beats: [],
       charactersPresent: [],
@@ -149,11 +203,12 @@ export const Studio: React.FC = () => {
     });
 
     setActiveProjectId(newProjectId);
-    setActiveProjectTitle('Untitled Draft');
+    setActiveProjectTitle(finalTitle);
     setActiveChapterId(newChapterId);
-    setActiveChapterTitle('Chapter 01');
+    setActiveChapterTitle(finalChapter);
     setActiveSceneId(newSceneId);
-    setActiveDocumentType('story');
+    setActiveDocumentType(modalGenre);
+    setIsNewWritingModalOpen(false);
     setCurrentScreen('editor');
   };
 
@@ -186,7 +241,7 @@ export const Studio: React.FC = () => {
         </div>
 
         <Button
-          onClick={handleNewWriting}
+          onClick={handleOpenNewWritingDialog}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
@@ -329,6 +384,115 @@ export const Studio: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Story Planning & Partner Shaping Modal */}
+      <Dialog open={isNewWritingModalOpen} onOpenChange={setIsNewWritingModalOpen}>
+        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-3xl max-w-lg w-full p-6 shadow-2xl text-[#25251F] font-sans">
+          <DialogHeader className="pb-3 border-b border-[#E8E2D7]">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#EAE2D2] flex items-center justify-center text-[#C77B5B]">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <DialogTitle className="font-serif font-bold text-lg text-[#25251F]">
+                  Start New Story
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#706B62] mt-0.5 font-sans">
+                  Tell inkFlow what you are planning to write. AI will craft custom partner rules (tone, sensory details, and pacing) for this story.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#4A4740] block">
+                Story Title
+              </label>
+              <Input
+                type="text"
+                value={modalTitle}
+                onChange={(e) => setModalTitle(e.target.value)}
+                placeholder="e.g. The Floor 101"
+                className="text-xs rounded-xl bg-[#F7F2E8] border-[#DFD8CC] text-[#25251F] focus-visible:ring-[#3F5236]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#4A4740] block">
+                Format
+              </label>
+              <div className="flex items-center gap-2">
+                {[
+                  { id: 'short-story', label: 'Short Story' },
+                  { id: 'story', label: 'Story' },
+                  { id: 'novel', label: 'Novel' },
+                  { id: 'blog', label: 'Blog Essay' },
+                  { id: 'email', label: 'Email' }
+                ].map((fmt) => (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => setModalGenre(fmt.id as DocumentType)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                      modalGenre === fmt.id
+                        ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold shadow-2xs'
+                        : 'bg-[#F2ECE1] text-[#615C53] hover:bg-[#EAE4D7]'
+                    }`}
+                  >
+                    {fmt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#4A4740] block">
+                What are you planning to write?
+              </label>
+              <textarea
+                rows={4}
+                value={modalPremise}
+                onChange={(e) => setModalPremise(e.target.value)}
+                placeholder="e.g. A mystery about a 100-floor Moscow hotel with a secret 101st floor that only a rookie room-service worker can see..."
+                className="w-full text-xs font-serif p-3 rounded-2xl bg-[#F7F2E8] border border-[#DFD8CC] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:ring-1 focus:ring-[#3F5236] resize-none shadow-2xs leading-relaxed"
+              />
+            </div>
+
+            <DialogFooter className="pt-3 border-t border-[#E8E2D7] flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => handleConfirmCreateWriting(false)}
+                disabled={isGeneratingPartner}
+                className="text-xs rounded-xl text-[#7A7469] hover:text-[#25251F] cursor-pointer"
+              >
+                Skip & Start Blank Draft
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => handleConfirmCreateWriting(true)}
+                disabled={isGeneratingPartner}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-xs cursor-pointer"
+              >
+                {isGeneratingPartner ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Shaping Partner...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Create & Shape AI Partner</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

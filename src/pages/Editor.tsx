@@ -3,6 +3,7 @@ import { useInkFlowStore } from '../store/useInkFlowStore';
 import { ChapterNavigator } from '../components/editor/ChapterNavigator';
 import { ManuscriptEditor } from '../components/editor/ManuscriptEditor';
 import { AIPartner } from '../components/editor/AIPartner';
+import { TuneStoryPartnerDialog } from '../components/editor/TuneStoryPartnerDialog';
 import { resolveModelForTask } from '../lib/modelRouter';
 import { requestOllamaCompletion, parseOptionsFromAI } from '../lib/ollama';
 import { parseSkillMarkdown } from '../lib/skillParser';
@@ -38,15 +39,17 @@ export const Editor: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [activeTask, setActiveTask] = useState<string | null>(null);
+  const [isTuneModalOpen, setIsTuneModalOpen] = useState(false);
+  const [tuneExcerpt, setTuneExcerpt] = useState('');
   const editorInstanceRef = useRef<EditorHandle | null>(null);
 
   // Execute dynamic AI action reading directly from the manuscript
-  const handleAIAction = async (task: 'continue' | 'rewrite' | 'expand' | 'brainstorm', customDirective?: string) => {
+  const handleAIAction = async (task: 'continue' | 'format' | 'rewrite' | 'expand' | 'brainstorm', customDirective?: string) => {
     setIsLoading(true);
     setActiveTask(task);
     setSuggestionTaskType(task);
 
-    const routing = resolveModelForTask(selectedModel, task, availableModels);
+    const routing = resolveModelForTask(selectedModel, task === 'format' ? 'rewrite' : task, availableModels);
     const parsedSkill = parseSkillMarkdown(activeSkillMarkdown);
 
     // Extract current actual text from editor, filtering out any boilerplate placeholder
@@ -78,6 +81,7 @@ export const Editor: React.FC = () => {
         if (generationMode === 'write-for-me') {
           prompt = `Project / Collection: "${activeProjectTitle}"
 Story Title: "${activeChapterTitle}"
+Active partner style: "${parsedSkill.title}" - ${parsedSkill.voice}
 ${customDirective ? `Directive: ${customDirective}` : ''}
 
 Task: Write a complete, evocative opening narrative paragraph (around 80 to 140 words) that immediately establishes the mood, sensory setting, and opening tension of this story.
@@ -85,6 +89,7 @@ CRITICAL: Output ONLY the story paragraph itself. Do NOT include meta-commentary
         } else {
           prompt = `Project / Collection: "${activeProjectTitle}"
 Story Title: "${activeChapterTitle}"
+Active partner style: "${parsedSkill.title}"
 ${customDirective ? `Directive: ${customDirective}` : ''}
 
 Task: Write 2 to 3 distinct, evocative opening paragraph options (each around 50 to 90 words) to begin "${activeChapterTitle}".
@@ -93,6 +98,7 @@ Formatting: Number each option 1., 2., 3. on separate lines. Output only narrati
       } else if (task === 'brainstorm') {
         prompt = `Project / Collection: "${activeProjectTitle}"
 Story Title: "${activeChapterTitle}"
+Active partner style: "${parsedSkill.title}"
 ${customDirective ? `Directive: ${customDirective}` : ''}
 
 Task: Suggest 4 imaginative premise ideas, plot hooks, or narrative directions for this story ("${activeChapterTitle}").
@@ -108,34 +114,46 @@ Formatting: Number each variation 1., 2., 3.`;
         if (generationMode === 'write-for-me') {
           prompt = `Project: "${activeProjectTitle}"
 Story Title: "${activeChapterTitle}"
+Active partner skill: "${parsedSkill.title}" - ${parsedSkill.voice}
 Existing manuscript context:
 """
 ${lastExcerpt}
 """
 ${customDirective ? `Directive: ${customDirective}` : ''}
 
-Task: Continue the story seamlessly from the exact point where the manuscript text ends. Write a full, immersive narrative paragraph (around 80 to 150 words) developing the immediate action and character perspective.
+Task: Continue the story seamlessly from the exact point where the manuscript text ends. Write a full, immersive narrative paragraph (around 100 to 160 words) developing the immediate action and character perspective.
 CRITICAL RULES:
-1. NEVER repeat or summarize any words or sentences from the existing manuscript above.
+1. NEVER repeat, summarize, or echo sentences from the existing manuscript above.
 2. Advance the narrative forward with new developments.
 3. Output ONLY narrative prose for the new paragraph. No conversational remarks or quotes.`;
         } else {
           prompt = `Story Title: "${activeChapterTitle}"
 Collection: "${activeProjectTitle}"
+Active partner skill: "${parsedSkill.title}" - ${parsedSkill.voice}
 Recent manuscript context:
 """
 ${lastExcerpt}
 """
 ${customDirective ? `Directive: ${customDirective}` : ''}
 
-Task: Suggest 2 to 3 distinct, compelling narrative continuation paragraphs (each around 50 to 90 words) for what happens next in this scene.
+Task: Suggest 2 to 3 distinct, compelling narrative continuation paragraphs (each around 60 to 100 words) for what happens next in this scene.
 CRITICAL RULES:
 1. NEVER repeat or echo sentences from the existing manuscript.
 2. Provide each option on a new line starting with 1., 2., 3.
 3. Output only story prose without conversational remarks.`;
         }
+      } else if (task === 'format') {
+        prompt = `Story Title: "${activeChapterTitle}"
+Active partner skill: "${parsedSkill.title}" - ${parsedSkill.voice}
+Manuscript passage to format and fix:
+"""
+${lastExcerpt}
+"""
+Task: Format and fix this passage into polished, clean literary prose. Fix all run-on sentences, grammatical mistakes, spelling errors, and punctuation while strictly preserving all original plot events, characters, and the story premise.
+Formatting: Provide 2 polished variations. Number each variation 1., 2. Output ONLY the polished prose without conversational remarks.`;
       } else if (task === 'rewrite') {
         prompt = `Story Title: "${activeChapterTitle}"
+Active partner skill: "${parsedSkill.title}" - ${parsedSkill.voice}
 Manuscript passage to revise:
 """
 ${lastExcerpt}
@@ -146,6 +164,7 @@ Task: Provide 2 to 3 alternative rewritten variations of this passage.
 Formatting: Number each variation 1., 2., 3. Output only the revised prose.`;
       } else if (task === 'expand') {
         prompt = `Story Title: "${activeChapterTitle}"
+Active partner skill: "${parsedSkill.title}" - ${parsedSkill.voice}
 Manuscript passage to expand:
 """
 ${lastExcerpt}
@@ -156,6 +175,7 @@ Task: Provide 2 expanded variations that deepen the scene with sensory immersion
       } else if (task === 'brainstorm') {
         prompt = `Project: "${activeProjectTitle}"
 Story: "${activeChapterTitle}"
+Active partner skill: "${parsedSkill.title}"
 Current passage:
 """
 ${lastExcerpt}
@@ -219,7 +239,7 @@ Formatting: Output each idea on a separate line starting with '- '.`;
             editorInstanceRef.current.commands.insertContent(`<p>${insertText}</p>`);
           }
         } else {
-          // Suggestion mode (Continue, Rewrite, Expand): present options in the editor
+          // Suggestion mode (Continue, Format, Rewrite, Expand): present options in the editor
           const options = parseOptionsFromAI(rawResponse, activeProjectTitle);
           setContinuationSuggestions(options);
           setIsSuggestionsCardOpen(true);
@@ -265,6 +285,12 @@ Formatting: Output each idea on a separate line starting with '- '.`;
     }
   };
 
+  const handleOpenTuneModal = () => {
+    const text = editorInstanceRef.current ? editorInstanceRef.current.getText() : '';
+    setTuneExcerpt(text);
+    setIsTuneModalOpen(true);
+  };
+
   return (
     <div className="flex-1 flex overflow-hidden relative">
       {/* Left Column: Chapter Navigator (hidden in focus mode) */}
@@ -283,13 +309,22 @@ Formatting: Output each idea on a separate line starting with '- '.`;
       {!isFocusMode && (
         <AIPartner 
           onContinue={() => handleAIAction('continue')}
+          onFormat={() => handleAIAction('format')}
           onRewrite={() => handleAIAction('rewrite')}
           onExpand={() => handleAIAction('expand')}
           onBrainstorm={() => handleAIAction('brainstorm')}
+          onOpenTuneModal={handleOpenTuneModal}
           isLoading={isLoading}
           activeTask={activeTask}
         />
       )}
+
+      {/* Tune Partner Dialog Modal */}
+      <TuneStoryPartnerDialog
+        open={isTuneModalOpen}
+        onOpenChange={setIsTuneModalOpen}
+        currentManuscriptExcerpt={tuneExcerpt}
+      />
     </div>
   );
 };
