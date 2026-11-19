@@ -135,8 +135,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 sm:px-16 py-10 max-w-3xl mx-auto w-full flex flex-col justify-between">
-      <div>
+    <div className="flex-1 overflow-y-auto px-6 sm:px-10 lg:px-14 py-8 w-full flex flex-col justify-between">
+      <div className="max-w-4xl w-full mx-auto">
         {/* Dynamic Editorial Chapter Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">

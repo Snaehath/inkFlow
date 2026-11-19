@@ -244,7 +244,7 @@ export const Projects: React.FC = () => {
   }, [projects]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-8 max-w-6xl mx-auto w-full space-y-6 select-none">
+    <div className="flex-1 overflow-y-auto px-8 lg:px-12 py-8 w-full space-y-6 select-none">
       {/* Header: Title & Action */}
       <div className="flex items-center justify-between">
         <div>
@@ -384,7 +384,7 @@ export const Projects: React.FC = () => {
 
       {/* Projects Grid View */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filteredProjects.map((proj) => (
             <Card
               key={proj.id}

@@ -173,7 +173,7 @@ export const Studio: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-8 max-w-5xl mx-auto w-full space-y-8 select-none">
+    <div className="flex-1 overflow-y-auto px-8 lg:px-12 py-8 w-full space-y-8 select-none">
       {/* Studio Header: Greeting & Quick Action */}
       <div className="flex items-center justify-between">
         <div>

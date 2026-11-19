@@ -30,7 +30,7 @@ export const Skills: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-6 max-w-7xl mx-auto w-full flex flex-col justify-between space-y-5 select-none">
+    <div className="flex-1 overflow-y-auto px-8 lg:px-12 py-6 w-full flex flex-col justify-between space-y-5 select-none">
       {/* Title & Philosophy Subtitle */}
       <div className="flex items-center justify-between">
         <div>

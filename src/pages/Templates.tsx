@@ -287,7 +287,7 @@ Chapter Title | Brief Scene Objective`;
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-8 max-w-6xl mx-auto w-full space-y-6 select-none">
+    <div className="flex-1 overflow-y-auto px-8 lg:px-12 py-8 w-full space-y-6 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -389,7 +389,7 @@ Chapter Title | Brief Scene Objective`;
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((tmpl) => {
             const Icon = tmpl.icon;
             return (
