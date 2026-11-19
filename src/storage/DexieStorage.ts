@@ -58,9 +58,35 @@ export const db = new InkFlowDatabase();
 
 // Seed initial demonstration novel database with hierarchical scenes, character knowledge, and linter alerts
 export async function seedInitialDemoData(): Promise<{ projectId: string; sceneId: string }> {
-  const glassOrchardExists = await db.projects.get('project-glass-orchard');
+  // 1. Clean up legacy demo-project-1 and studio essay if present from earlier runs
+  try {
+    const oldDemo = await db.projects.get('demo-project-1');
+    if (oldDemo) {
+      await db.projects.delete('demo-project-1');
+      await db.chapters.where('projectId').equals('demo-project-1').delete();
+      await db.scenes.where('projectId').equals('demo-project-1').delete();
+      await db.characters.where('projectId').equals('demo-project-1').delete();
+      await db.locations.where('projectId').equals('demo-project-1').delete();
+      await db.worldLore.where('projectId').equals('demo-project-1').delete();
+      await db.plotThreads.where('projectId').equals('demo-project-1').delete();
+      await db.promises.where('projectId').equals('demo-project-1').delete();
+      await db.snapshots.where('projectId').equals('demo-project-1').delete();
+      await db.linterIssues.where('projectId').equals('demo-project-1').delete();
+    }
+    const oldEssay = await db.projects.get('project-studio-essay');
+    if (oldEssay) {
+      await db.projects.delete('project-studio-essay');
+      await db.chapters.where('projectId').equals('project-studio-essay').delete();
+      await db.scenes.where('projectId').equals('project-studio-essay').delete();
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+
   const primaryProjectId = 'project-glass-orchard';
   const primarySceneId = 'sc-04-1';
+  const guideSceneId = 'sc-01-1';
+  const glassOrchardExists = await db.projects.get(primaryProjectId);
 
   if (!glassOrchardExists) {
     const now = Date.now();
@@ -69,7 +95,7 @@ export async function seedInitialDemoData(): Promise<{ projectId: string; sceneI
     await db.projects.add({
       id: primaryProjectId,
       title: 'The Glass Orchard',
-      genre: 'Atmospheric Mystery Novel',
+      genre: 'Novel',
       targetWordCount: 75000,
       description: 'Elara investigates the mysterious coastal town of Harborwick and an enigmatic glasshouse orchard.',
       activeSceneId: primarySceneId,
@@ -77,35 +103,14 @@ export async function seedInitialDemoData(): Promise<{ projectId: string; sceneI
       updatedAt: now,
     });
 
-    // Also add other projects shown in Studio UI: City Letters & Wandering Songs
-    await db.projects.add({
-      id: 'project-city-letters',
-      title: 'City Letters',
-      genre: 'Short stories',
-      targetWordCount: 25000,
-      description: 'Epistolary dispatches across shifting European capitals.',
-      createdAt: now - 86400000 * 3,
-      updatedAt: now - 3600000 * 3,
-    });
-
-    await db.projects.add({
-      id: 'project-wandering-songs',
-      title: 'Wandering Songs',
-      genre: 'Story collection',
-      targetWordCount: 40000,
-      description: 'Folkloric vignettes of musicians travelling between forgotten valleys.',
-      createdAt: now - 86400000 * 7,
-      updatedAt: now - 86400000,
-    });
-
     // 2. Chapters for The Glass Orchard
     const glassChapters: Chapter[] = [
       {
         id: 'ch-01',
         projectId: primaryProjectId,
-        title: 'Chapter 01 — The Letter',
+        title: 'Chapter 01 — The Letter & Studio Guide',
         order: 1,
-        summary: 'A stained envelope arrives bearing news from the coast.',
+        summary: 'A stained envelope arrives bearing news from the coast, plus inkFlow quick start instructions.',
         createdAt: now - 86400000 * 4,
         updatedAt: now - 86400000 * 4,
       },
@@ -148,7 +153,35 @@ export async function seedInitialDemoData(): Promise<{ projectId: string; sceneI
     ];
     await db.chapters.bulkAdd(glassChapters);
 
-    // 3. Scene for Chapter 04
+    // 3. Scenes for The Glass Orchard
+    // Guide Scene in Chapter 01
+    await db.scenes.add({
+      id: guideSceneId,
+      chapterId: 'ch-01',
+      projectId: primaryProjectId,
+      title: 'Chapter 01 — The Letter & Studio Guide',
+      order: 1,
+      povCharacterId: 'char-elara',
+      locationId: 'loc-study',
+      storyTime: 'Early morning, rainy autumn',
+      sceneGoal: 'Understand inkFlow capabilities and begin the investigation',
+      conflict: 'Balancing authorial voice with contextual AI assistance',
+      outcome: 'Confidence in crafting manuscripts with inkFlow',
+      beats: [
+        { id: 'b-guide-1', description: 'Review the letter from Harborwick', completed: true },
+        { id: 'b-guide-2', description: 'Experiment with Continue, Rewrite, and Expand in the AI Partner panel', completed: false },
+        { id: 'b-guide-3', description: 'Explore Skills & AI Studio to customize writing persona', completed: false },
+      ],
+      charactersPresent: ['char-elara'],
+      activePlotThreadIds: ['plot-glass-orchard'],
+      contentHtml: `<p>The wax on the envelope seal had cracked during the journey, but the impression remained clear: an orchard branch entwined with an iron key.</p><p><em>“If you are reading this, Elara, the glasshouse has begun to whisper again. Come to Harborwick before the autumn tides turn.”</em></p><hr /><h3>How to Use inkFlow Writing Studio</h3><p>Welcome to inkFlow. This workspace is designed so that <strong>you remain in control</strong>. AI is a creative collaborator sitting beside your manuscript, not an intrusive chatbot.</p><ul><li><strong>Distraction-Free Canvas:</strong> Write directly in this central editor. Use <kbd>Ctrl+B</kbd> for bold, <kbd>Ctrl+I</kbd> for italic, or click the expand icon in the top bar for full focus mode.</li><li><strong>Contextual AI Writing Partner (Right Panel):</strong> Select any passage and click <em>Rewrite</em> to polish prose, <em>Expand</em> to deepen sensory detail, or <em>Continue</em> to explore natural next lines.</li><li><strong>Inline Reviewable Cards:</strong> Every continuation provides <em>Accept</em>, <em>Try another</em>, or <em>Dismiss</em>. Your draft is never changed without explicit approval.</li><li><strong>Skills &amp; AI Studio:</strong> Shape your assistant in plain Markdown under the <em>Skills</em> tab. Define voice, style, and rules.</li><li><strong>Local &amp; Private:</strong> inkFlow communicates directly with your local Ollama instance—no cloud tokens or third-party servers.</li></ul>`,
+      wordCount: 382,
+      status: 'drafted',
+      createdAt: now - 86400000 * 4,
+      updatedAt: now - 86400000 * 4,
+    });
+
+    // Primary Scene in Chapter 04
     await db.scenes.add({
       id: primarySceneId,
       chapterId: 'ch-04',
@@ -175,467 +208,197 @@ export async function seedInitialDemoData(): Promise<{ projectId: string; sceneI
       createdAt: now - 3600000,
       updatedAt: now,
     });
-  }
 
-  const projectCount = await db.projects.count();
-  const demoProjectId = 'demo-project-1';
-  const firstSceneId = 'sc-1-1';
-
-  if (projectCount === 0) {
-    const now = Date.now();
-
-    // 1. Project
+    // 4. City Letters (Short Story)
     await db.projects.add({
-      id: demoProjectId,
-      title: 'The Shadow of Castle Black',
-      genre: 'Dark Fantasy Mystery',
-      targetWordCount: 80000,
-      description: 'Detective Emma investigates ancient blood magic ritual murders in the northern mountains.',
-      activeSceneId: firstSceneId,
-      createdAt: now,
-      updatedAt: now,
+      id: 'project-city-letters',
+      title: 'City Letters',
+      genre: 'Short Story',
+      targetWordCount: 25000,
+      description: 'Epistolary dispatches across shifting European capitals.',
+      createdAt: now - 86400000 * 3,
+      updatedAt: now - 3600000 * 3,
+    });
+    await db.chapters.add({
+      id: 'ch-city-01',
+      projectId: 'project-city-letters',
+      title: 'Postmarked Prague, 1928',
+      order: 1,
+      createdAt: now - 86400000 * 3,
+      updatedAt: now - 3600000 * 3,
+    });
+    await db.scenes.add({
+      id: 'sc-city-01',
+      chapterId: 'ch-city-01',
+      projectId: 'project-city-letters',
+      title: 'The Clockmaker\'s Lane',
+      order: 1,
+      beats: [],
+      charactersPresent: [],
+      activePlotThreadIds: [],
+      contentHtml: `<p>My dearest Julian, the snow here does not fall so much as hover between the copper spires. I have found rooms above a bookbinder whose shop smells of rabbit glue and cedarwood.</p>`,
+      wordCount: 4920,
+      status: 'drafted',
+      createdAt: now - 86400000 * 3,
+      updatedAt: now - 3600000 * 3,
     });
 
-    // 2. Chapters
-    const chapters: Chapter[] = [
-      {
-        id: 'ch-1',
-        projectId: demoProjectId,
-        title: 'Chapter 1: The Arrival',
-        order: 1,
-        summary: 'Emma arrives at Castle Black amidst a northern gale and senses Victor inside.',
-        createdAt: now - 86400000,
-        updatedAt: now - 86400000,
-      },
-      {
-        id: 'ch-2',
-        projectId: demoProjectId,
-        title: 'Chapter 2: The Forbidden Chamber',
-        order: 2,
-        summary: 'Emma uncovers an ancient oak door bearing the blood seal of Victor.',
-        createdAt: now - 43200000,
-        updatedAt: now - 43200000,
-      },
-      {
-        id: 'ch-3',
-        projectId: demoProjectId,
-        title: 'Chapter 3: The Blood Crypt',
-        order: 3,
-        summary: 'Inside the subterranean crypt, an obsidian brazier flares and a guild sentinel confronts Emma.',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'ch-4',
-        projectId: demoProjectId,
-        title: 'Chapter 4: The Alchemist\'s Secret',
-        order: 4,
-        summary: 'A hidden laboratory reveals the true cost of the grand eclipse ritual.',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'ch-5',
-        projectId: demoProjectId,
-        title: 'Chapter 5: The Final Confrontation',
-        order: 5,
-        summary: 'Emma and Victor face each other atop the crumbling northern parapet.',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
-    await db.chapters.bulkAdd(chapters);
-
-    // 3. Scenes
-    const scenes: Scene[] = [
-      {
-        id: firstSceneId,
-        chapterId: 'ch-1',
-        projectId: demoProjectId,
-        title: 'Carriage through the Murk',
-        order: 1,
-        povCharacterId: 'char-emma',
-        locationId: 'loc-carriage',
-        storyTime: 'October 14, 1894 - Nightfall',
-        sceneGoal: 'Reach Castle Black before the northern storm closes the pass',
-        conflict: 'Coachman Caleb refuses to drive closer to the fortress gates',
-        outcome: 'Emma continues on foot into the fortress courtyard with her grandfather\'s ring',
-        beats: [
-          { id: 'b-1', description: 'Hear the tolling iron bell through carriage storm', completed: true },
-          { id: 'b-2', description: 'Coachman halts horses; refuses to enter outer wall', completed: true },
-          { id: 'b-3', description: 'Emma checks grandfather\'s silver ring; ring warms against skin', completed: true },
-          { id: 'b-4', description: 'Step into the mud and approach the iron gates', completed: true },
-        ],
-        charactersPresent: ['char-emma', 'char-caleb'],
-        activePlotThreadIds: ['plot-murders', 'plot-legacy'],
-        contentHtml: `<h1>Chapter 1: The Arrival</h1><p>The night cold cut through Detective Emma's woolen coat like broken glass as her carriage lurched to a halt in front of Castle Black. Rain lashed against the ancient granite walls, carrying with it the unmistakable iron tang of fresh blood.</p><p>"We don't go any closer, miss," the coachman grunted, his fingers white on the reins. "The northern winds carry voices tonight, and none of them belong to the living."</p><p>Emma stepped down into the mud, pulling her collar high. She reached into her inner pocket and gripped the silver ring her grandfather had left her—its metallic chill oddly comforting against her fingers. Victor was inside. She could feel it.</p>`,
-        wordCount: 104,
-        status: 'drafted',
-        createdAt: now - 3600000,
-        updatedAt: now - 3600000,
-      },
-      {
-        id: 'sc-1-2',
-        chapterId: 'ch-1',
-        projectId: demoProjectId,
-        title: 'The Outer Courtyard',
-        order: 2,
-        povCharacterId: 'char-emma',
-        locationId: 'loc-courtyard',
-        storyTime: 'October 14, 1894 - 10:15 PM',
-        sceneGoal: 'Survey the perimeter for signs of blood sorcerer activity',
-        conflict: 'Frozen gate mechanisms and suspicious tracks',
-        outcome: 'Discovers fresh wagon tracks leading toward the subterranean crypt',
-        beats: [
-          { id: 'b-5', description: 'Inspect wagon wheel ruts in the fresh frost', completed: true },
-          { id: 'b-6', description: 'Notice strange absence of imperial guards', completed: true },
-        ],
-        charactersPresent: ['char-emma'],
-        activePlotThreadIds: ['plot-murders'],
-        contentHtml: `<p>The courtyard was deathly still save for the wind whistling through gargoyle arches. Frost crunched beneath Emma's boots as she knelt by the wheel ruts. Heavy wagons had passed through here hours ago—carrying crates lined with lead.</p><p>No guards manned the watchtowers. Castle Black had been abandoned by the Crown three months ago, yet fresh torches burned in the wall brackets.</p>`,
-        wordCount: 68,
-        status: 'drafted',
-        createdAt: now - 1800000,
-        updatedAt: now - 1800000,
-      },
-      {
-        id: 'sc-2-1',
-        chapterId: 'ch-2',
-        projectId: demoProjectId,
-        title: 'The Oak Portal',
-        order: 1,
-        povCharacterId: 'char-emma',
-        locationId: 'loc-great-hall',
-        storyTime: 'October 14, 1894 - 10:45 PM',
-        sceneGoal: 'Find the entrance to the lower archives',
-        conflict: 'A reinforced door sealed with an alchemical sigil',
-        outcome: 'The silver ring reacts with the seal, unlocking the latch',
-        beats: [
-          { id: 'b-7', description: 'Examine carved sigil of house Victor', completed: true },
-          { id: 'b-8', description: 'Touch ring to seal and unlock latch', completed: true },
-        ],
-        charactersPresent: ['char-emma'],
-        activePlotThreadIds: ['plot-legacy'],
-        contentHtml: `<p>Inside the fortress, cobwebs hung like torn drapes from the vaulted ceiling. Emma raised her lantern, illuminating a heavy oak door bearing the seal of the house of Victor.</p><p>As she drew closer, the silver ring on her finger grew searing hot. When she pressed the bezel against the copper lockplate, the tumblers tumbled with a heavy, hollow thud.</p>`,
-        wordCount: 63,
-        status: 'drafted',
-        createdAt: now - 900000,
-        updatedAt: now - 900000,
-      },
-      {
-        id: 'sc-3-1',
-        chapterId: 'ch-3',
-        projectId: demoProjectId,
-        title: 'The Altar of Ash',
-        order: 1,
-        povCharacterId: 'char-emma',
-        locationId: 'loc-crypt',
-        storyTime: 'October 14, 1894 - 11:30 PM',
-        sceneGoal: 'Confront Victor before he initiates the crimson eclipse rite',
-        conflict: 'The High Guild Sentinel stands guard over the subterranean altar',
-        outcome: 'Emma learns Victor is backed by the High Council',
-        beats: [
-          { id: 'b-9', description: 'Enter the flooded nave of the crypt', completed: false },
-          { id: 'b-10', description: 'Obsidian brazier flares to life', completed: false },
-          { id: 'b-11', description: 'Confront the Sentinel in Guild robes', completed: false },
-        ],
-        charactersPresent: ['char-emma', 'char-sentinel'],
-        activePlotThreadIds: ['plot-murders', 'plot-legacy'],
-        contentHtml: `<p>The heavy iron hinges groaned as Emma leaned her full weight against the subterranean door. The air that rushed to meet her was thick with the scent of wet stone and ancient sulfur.</p><p>"Victor isn't alone down here," she whispered, her fingers finding the silver seal in her pocket. The metal was burning hot.</p><p>Across the vaulted hall, an obsidian brazier flared to life without flint or spark. A figure stepped into the light—not Victor, but someone wearing the ceremonial robes of the High Guild.</p><p>"You shouldn't have opened that door, Detective."</p>`,
-        wordCount: 88,
-        status: 'drafted',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
-    await db.scenes.bulkAdd(scenes);
-
-    // 4. Characters
-    const characters: CharacterEntity[] = [
-      {
-        id: 'char-emma',
-        projectId: demoProjectId,
-        name: 'Detective Emma Vance',
-        role: 'protagonist',
-        age: '29',
-        occupation: 'Senior Inspector, Northern Special Constabulary',
-        voiceNotes: 'Controlled, perceptive, dry wit under pressure, pauses before answering difficult questions.',
-        personality: ['Analytical', 'Tenacious', 'Secretive', 'Skeptical'],
-        goals: ['Apprehend Victor', 'Uncover her grandfather\'s true connection to Castle Black'],
-        relationships: [
-          {
-            targetCharacterId: 'char-victor',
-            targetName: 'Victor the Alchemist',
-            relationshipType: 'Enemy / Rival',
-            trustScore: -90,
-            notes: 'Responsible for three ritual murders across northern counties.',
-          },
-          {
-            targetCharacterId: 'char-caleb',
-            targetName: 'Coachman Caleb',
-            relationshipType: 'Neutral Ally',
-            trustScore: 20,
-            notes: 'Hired driver from the village below.',
-          },
-        ],
-        status: 'alive',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'char-victor',
-        projectId: demoProjectId,
-        name: 'Victor Malakar',
-        role: 'antagonist',
-        age: '54',
-        occupation: 'Rogue Blood Sorcerer & Former Guild Arch-Scholar',
-        voiceNotes: 'Cultured, aristocratic, contemptuous of imperial bureaucracy, speaks softly.',
-        personality: ['Ruthless', 'Obsessive', 'Scholarly'],
-        goals: ['Activate the blood altar during the midnight eclipse'],
-        relationships: [
-          {
-            targetCharacterId: 'char-emma',
-            targetName: 'Detective Emma Vance',
-            relationshipType: 'Enemy',
-            trustScore: -100,
-            notes: 'Considers her a nuisance who fails to see the grand pattern.',
-          },
-        ],
-        status: 'alive',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'char-caleb',
-        projectId: demoProjectId,
-        name: 'Caleb the Coachman',
-        role: 'minor',
-        age: '61',
-        occupation: 'Northern Post-Driver',
-        voiceNotes: 'Gruff northern accent, short sentences, superstitious.',
-        personality: ['Superstitious', 'Pragmatic'],
-        goals: ['Survive the night and return horses safely'],
-        relationships: [],
-        status: 'alive',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'char-sentinel',
-        projectId: demoProjectId,
-        name: 'High Guild Sentinel',
-        role: 'supporting',
-        age: '40',
-        occupation: 'Sworn Guard of the Inner Alchemical Council',
-        voiceNotes: 'Monotone, zealot devotion, ceremonial cadence.',
-        personality: ['Zealot', 'Loyal', 'Stoic'],
-        goals: ['Prevent outsiders from reaching the altar'],
-        relationships: [],
-        status: 'alive',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
-    await db.characters.bulkAdd(characters);
-
-    // 5. Temporal Character State (Emma at Scene 3-1)
-    await db.characterStates.add({
-      id: 'state-emma-sc3-1',
-      characterId: 'char-emma',
-      sceneId: 'sc-3-1',
-      knownFacts: [
-        'Victor is inside Castle Black',
-        'Grandfather\'s ring unlocks the ancient locks of the fortress',
-        'No Crown guards are present in the outer ward',
-      ],
-      falseBeliefs: [
-        'Believes the High Guild is trying to stop Victor',
-      ],
-      emotionalState: 'High alertness, growing dread over grandfather\'s legacy',
+    // 5. A Quiet Rain (Blog Series)
+    await db.projects.add({
+      id: 'project-quiet-rain',
+      title: 'A Quiet Rain',
+      genre: 'Blog Series',
+      targetWordCount: 15000,
+      description: 'Reflections on solitude, prose rhythm, and observational essays.',
+      createdAt: now - 86400000 * 2,
+      updatedAt: now - 3600000 * 5,
+    });
+    await db.chapters.add({
+      id: 'ch-rain-01',
+      projectId: 'project-quiet-rain',
+      title: 'On Writing in Silence',
+      order: 1,
+      createdAt: now - 86400000 * 2,
+      updatedAt: now - 3600000 * 5,
+    });
+    await db.scenes.add({
+      id: 'sc-rain-01',
+      chapterId: 'ch-rain-01',
+      projectId: 'project-quiet-rain',
+      title: 'The Sound of Morning Mist',
+      order: 1,
+      beats: [],
+      charactersPresent: [],
+      activePlotThreadIds: [],
+      contentHtml: `<p>There is a quality to morning rain that invites the pen forward. When the room is still, sentences find their natural cadence without the urgency of conversation.</p>`,
+      wordCount: 3104,
+      status: 'drafted',
+      createdAt: now - 86400000 * 2,
+      updatedAt: now - 3600000 * 5,
     });
 
-    // 6. Locations
-    await db.locations.bulkAdd([
-      {
-        id: 'loc-carriage',
-        projectId: demoProjectId,
-        name: 'The Northern High Road',
-        type: 'Passage / Transport',
-        description: 'Muddy carriage road carved along the granite cliff edge beneath Castle Black.',
-        sensoryDetails: 'Smell of wet wool, screaming gales, smell of iron and pine needles.',
-        associatedCharacters: ['char-emma', 'char-caleb'],
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'loc-courtyard',
-        projectId: demoProjectId,
-        name: 'Castle Black Outer Courtyard',
-        type: 'Fortress Courtyard',
-        description: 'Vast granite ward flanked by broken siege gargoyles and frozen mud.',
-        sensoryDetails: 'Crunch of thin frost, torches sputtering in wind.',
-        associatedCharacters: ['char-emma'],
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 'loc-crypt',
-        projectId: demoProjectId,
-        name: 'The Subterranean Blood Crypt',
-        type: 'Vaulted Tomb / Temple',
-        description: 'Flooded nave beneath the fortress containing the ancient alchemical altar.',
-        sensoryDetails: 'Sulfur, damp stone, glow of obsidian fire.',
-        associatedCharacters: ['char-emma', 'char-sentinel', 'char-victor'],
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
+    // 6. Wandering Songs (Story Collection)
+    await db.projects.add({
+      id: 'project-wandering-songs',
+      title: 'Wandering Songs',
+      genre: 'Story Collection',
+      targetWordCount: 40000,
+      description: 'Folkloric vignettes of musicians travelling between forgotten valleys.',
+      createdAt: now - 86400000 * 7,
+      updatedAt: now - 86400000,
+    });
+    await db.chapters.add({
+      id: 'ch-wandering-01',
+      projectId: 'project-wandering-songs',
+      title: 'The Lowland Piper',
+      order: 1,
+      createdAt: now - 86400000 * 7,
+      updatedAt: now - 86400000,
+    });
+    await db.scenes.add({
+      id: 'sc-wandering-01',
+      chapterId: 'ch-wandering-01',
+      projectId: 'project-wandering-songs',
+      title: 'Song of the River Stone',
+      order: 1,
+      beats: [],
+      charactersPresent: [],
+      activePlotThreadIds: [],
+      contentHtml: `<p>Old Kenneth held his fiddle as one might hold an injured fledgling: gently, with fingers that remembered thirty winters of tavern hearths and harvest fairs.</p>`,
+      wordCount: 17226,
+      status: 'drafted',
+      createdAt: now - 86400000 * 7,
+      updatedAt: now - 86400000,
+    });
 
-    // 7. World Lore
-    await db.worldLore.bulkAdd([
-      {
-        id: 'lore-blood-magic',
-        projectId: demoProjectId,
-        title: 'The Law of Equal Transmutation',
-        category: 'magic',
-        description: 'Blood magic cannot create matter; it can only reforge existing living essence into kinetic or structural energy.',
-        rulesAndCosts: 'The sorcerer must offer their own vital pulse or consume living sacrifice.',
-        createdAt: now,
-      },
-      {
-        id: 'lore-high-guild',
-        projectId: demoProjectId,
-        title: 'The High Guild of Alchemists',
-        category: 'faction',
-        description: 'Imperial regulatory body chartered in 1740 to ban rogue sorcery. Secretly compromised.',
-        createdAt: now,
-      },
-    ]);
+    // 7. InkFlow Notes (Blog)
+    await db.projects.add({
+      id: 'project-inkflow-notes',
+      title: 'InkFlow Notes',
+      genre: 'Blog',
+      targetWordCount: 20000,
+      description: 'Studio dispatches on artificial intelligence, typography, and authorial autonomy.',
+      createdAt: now - 86400000 * 5,
+      updatedAt: now - 3600000 * 2,
+    });
+    await db.chapters.add({
+      id: 'ch-notes-01',
+      projectId: 'project-inkflow-notes',
+      title: 'Principles of AI-Native Writing',
+      order: 1,
+      createdAt: now - 86400000 * 5,
+      updatedAt: now - 3600000 * 2,
+    });
+    await db.scenes.add({
+      id: 'sc-notes-01',
+      chapterId: 'ch-notes-01',
+      projectId: 'project-inkflow-notes',
+      title: 'The Canvas as Interface',
+      order: 1,
+      beats: [],
+      charactersPresent: [],
+      activePlotThreadIds: [],
+      contentHtml: `<p>When software treats AI as an autonomous author, the writer becomes a mere editor of generic prose. When AI is positioned as a contextual assistant, the author remains the visionary.</p>`,
+      wordCount: 11090,
+      status: 'drafted',
+      createdAt: now - 86400000 * 5,
+      updatedAt: now - 3600000 * 2,
+    });
 
-    // 8. Plot Threads
-    await db.plotThreads.bulkAdd([
-      {
-        id: 'plot-murders',
-        projectId: demoProjectId,
-        title: 'The Castle Black Ritual Murders',
-        description: 'Three local magistrates found drained of blood bearing geometric alchemical burns.',
-        startedSceneId: firstSceneId,
-        status: 'in-progress',
-        relatedCharacters: ['char-emma', 'char-victor'],
-        createdAt: now,
-      },
-      {
-        id: 'plot-legacy',
-        projectId: demoProjectId,
-        title: 'Grandfather Vance\'s Secret',
-        description: 'How Emma\'s grandfather acquired the silver ring that unlocks Castle Black.',
-        startedSceneId: firstSceneId,
-        status: 'in-progress',
-        relatedCharacters: ['char-emma'],
-        createdAt: now,
-      },
-    ]);
-
-    // 9. Promises & Chekhov Guns
-    await db.promises.bulkAdd([
-      {
-        id: 'prom-ring',
-        projectId: demoProjectId,
-        title: 'The Silver Bezel Ring',
-        promiseType: 'chekhov_gun',
-        introducedSceneId: firstSceneId,
-        status: 'progressing',
-        ageScenes: 3,
-        notes: 'Already unlocked the oak portal; still contains unknown second inscription.',
-      },
-      {
-        id: 'prom-wagon',
-        projectId: demoProjectId,
-        title: 'The Lead-Lined Crates',
-        promiseType: 'mystery_question',
-        introducedSceneId: 'sc-1-2',
-        status: 'open',
-        ageScenes: 2,
-        notes: 'What did the wagons bring into the lower crypts?',
-      },
-    ]);
-
-    // 10. Pre-computed Linter Issues (Demonstrating the Story Linter)
-    await db.linterIssues.bulkAdd([
-      {
-        id: 'lint-1',
-        type: 'character_knowledge',
-        severity: 'warning',
-        sceneId: 'sc-3-1',
-        sceneTitle: 'The Altar of Ash',
-        title: 'Potential Character Knowledge Discrepancy',
-        explanation: 'In this scene, Emma recognizes the ceremonial robes of the High Guild. However, in Chapter 1 Scene 1 she stated she had never met a High Guild official before.',
-        excerpt: '"someone wearing the ceremonial robes of the High Guild."',
-        conflictingSceneId: firstSceneId,
-        conflictingSceneTitle: 'Carriage through the Murk',
-        suggestedFix: 'Clarify that Emma recognizes the embroidered crest from police textbooks, rather than personal familiarity.',
-        status: 'active',
-      },
-      {
-        id: 'lint-2',
-        type: 'unresolved_promise',
-        severity: 'info',
-        sceneId: 'sc-1-2',
-        sceneTitle: 'The Outer Courtyard',
-        title: 'Lead-Lined Crates Unexamined',
-        explanation: 'The lead-lined crates discovered in Scene 2 have not been inspected or referenced for 2 scenes.',
-        suggestedFix: 'Add sensory evidence of crate splinters or packing straw near the crypt entrance.',
-        status: 'active',
-      },
-    ]);
-
-    // 11. Momentum Engine: Goals & Milestones
-    await db.goals.bulkAdd([
-      {
-        id: 'goal-weekly',
-        projectId: demoProjectId,
-        type: 'words',
-        target: 2000,
-        current: 1240,
-        period: 'weekly',
-      },
-      {
-        id: 'goal-daily',
-        projectId: demoProjectId,
-        type: 'words',
-        target: 500,
-        current: 350,
-        period: 'daily',
-      },
-    ]);
-
-    await db.milestones.bulkAdd([
-      {
-        id: 'm-1',
-        projectId: demoProjectId,
-        title: 'Act I: The Arrival & Outer Ward',
-        actOrChapter: 'Act I',
-        completed: true,
-        targetWordEstimate: 5000,
-      },
-      {
-        id: 'm-2',
-        projectId: demoProjectId,
-        title: 'Act II: The Subterranean Blood Crypt',
-        actOrChapter: 'Act II',
-        completed: false,
-        targetWordEstimate: 15000,
-      },
-      {
-        id: 'm-3',
-        projectId: demoProjectId,
-        title: 'Act III: The Crimson Eclipse Confrontation',
-        actOrChapter: 'Act III',
-        completed: false,
-        targetWordEstimate: 25000,
-      },
-    ]);
+    // 8. Email Drafts (Email)
+    await db.projects.add({
+      id: 'project-email-drafts',
+      title: 'Email Drafts',
+      genre: 'Email',
+      targetWordCount: 5000,
+      description: 'Professional correspondence, agent queries, and editorial notes.',
+      createdAt: now - 86400000 * 6,
+      updatedAt: now - 3600000 * 8,
+    });
+    await db.chapters.add({
+      id: 'ch-email-01',
+      projectId: 'project-email-drafts',
+      title: 'Agent Inquiry — Manuscript Proposal',
+      order: 1,
+      createdAt: now - 86400000 * 6,
+      updatedAt: now - 3600000 * 8,
+    });
+    await db.scenes.add({
+      id: 'sc-email-01',
+      chapterId: 'ch-email-01',
+      projectId: 'project-email-drafts',
+      title: 'Query Letter — The Glass Orchard',
+      order: 1,
+      beats: [],
+      charactersPresent: [],
+      activePlotThreadIds: [],
+      contentHtml: `<p>Dear Ms. Thorne,</p><p>I am pleased to present <em>The Glass Orchard</em>, an 75,000-word atmospheric mystery novel set against the decaying salt piers of Harborwick.</p>`,
+      wordCount: 2148,
+      status: 'drafted',
+      createdAt: now - 86400000 * 6,
+      updatedAt: now - 3600000 * 8,
+    });
   }
 
   return { projectId: primaryProjectId, sceneId: primarySceneId };
+}
+
+// Reset entire database to pristine studio defaults
+export async function resetToCleanDefaults(): Promise<{ projectId: string; sceneId: string }> {
+  await db.projects.clear();
+  await db.chapters.clear();
+  await db.scenes.clear();
+  await db.characters.clear();
+  await db.characterStates.clear();
+  await db.locations.clear();
+  await db.worldLore.clear();
+  await db.plotThreads.clear();
+  await db.promises.clear();
+  await db.snapshots.clear();
+  await db.linterIssues.clear();
+  await db.sessions.clear();
+  await db.goals.clear();
+  await db.milestones.clear();
+
+  return seedInitialDemoData();
 }

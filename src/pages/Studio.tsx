@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, ArrowRight, MoreHorizontal } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Plus, ArrowRight, MoreHorizontal, BookOpen, FolderKanban, RotateCcw } from 'lucide-react';
 import { useInkFlowStore } from '../store/useInkFlowStore';
-import { db } from '../storage/DexieStorage';
+import { db, resetToCleanDefaults } from '../storage/DexieStorage';
 import { NewWritingMenu } from '../components/studio/NewWritingMenu';
 import { RecentDocuments } from '../components/studio/RecentDocuments';
 import { ProjectCards } from '../components/studio/ProjectCards';
@@ -38,6 +38,19 @@ export const Studio: React.FC = () => {
   } = useInkFlowStore();
 
   const [resumeInfo, setResumeInfo] = useState<ResumeCardInfo | null>(null);
+  const [isHeroMenuOpen, setIsHeroMenuOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const heroMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (heroMenuRef.current && !heroMenuRef.current.contains(e.target as Node)) {
+        setIsHeroMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleOutsideClick);
+    return () => window.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -70,7 +83,7 @@ export const Studio: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshTrigger]);
 
   const handleContinueWriting = () => {
     if (!resumeInfo) {
@@ -185,9 +198,62 @@ export const Studio: React.FC = () => {
                     {resumeInfo.genre} — {resumeInfo.chapterTitle}
                   </div>
                 </div>
-                <button className="p-1 text-[#8A847A] hover:text-[#25251F] rounded-lg transition-colors">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsHeroMenuOpen(!isHeroMenuOpen)}
+                    title="Story options"
+                    className="p-1.5 text-[#8A847A] hover:text-[#25251F] hover:bg-[#EAE4D7] rounded-lg transition-colors cursor-pointer"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+
+                  {isHeroMenuOpen && (
+                    <div 
+                      ref={heroMenuRef}
+                      className="absolute right-0 top-8 w-52 bg-[#FAF7F2] border border-[#DDD5C7] rounded-xl shadow-lg p-1.5 z-50 text-xs font-sans divide-y divide-[#EFEAE0]"
+                    >
+                      <div className="space-y-0.5 pb-1">
+                        <button
+                          onClick={() => {
+                            setIsHeroMenuOpen(false);
+                            handleContinueWriting();
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-[#7A7469]" />
+                          <span>Continue Writing</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsHeroMenuOpen(false);
+                            setCurrentScreen('projects');
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <FolderKanban className="w-3.5 h-3.5 text-[#7A7469]" />
+                          <span>View in Projects</span>
+                        </button>
+                      </div>
+
+                      <div className="pt-1">
+                        <button
+                          onClick={async () => {
+                            setIsHeroMenuOpen(false);
+                            if (window.confirm('Reset workspace to clean studio defaults (The Glass Orchard, City Letters, clean templates)?')) {
+                              await resetToCleanDefaults();
+                              setRefreshTrigger(k => k + 1);
+                            }
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reset to Clean Defaults</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <p className="font-serif italic text-xs text-[#524E46] line-clamp-2 mt-2 leading-relaxed">

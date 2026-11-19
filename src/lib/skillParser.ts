@@ -119,10 +119,17 @@ export const DEFAULT_SKILL_MARKDOWN = `# Atmospheric Fiction Partner
 Write with quiet tension, sensory details, and restrained emotion.
 
 ## Style
-Prefer precise language. Avoid clichés and melodrama.
+Prefer precise language. Avoid clichés and melodrama. Keep sentences balanced between observational clarity and character intimacy.
 
 ## When helping
-Offer 2-3 continuation options before drafting a full paragraph.
+Offer 2-3 continuation options before drafting a full paragraph. Always preserve the author's pacing and never alter established facts.
+
+## How to use this skill
+- Edit any section of this Markdown to immediately change how your AI writing partner behaves.
+- ## Voice defines the tone, mood, and vocabulary used in suggestions.
+- ## Style defines sentence structure, rhythm, and what tropes or melodrama to avoid.
+- ## When helping sets generation rules (e.g. bullet ideas vs full prose).
+- Click 'Apply to session' to activate for your current document, or 'Save as reusable skill' to keep for future projects.
 `;
 
 export const PRESET_SKILLS: SkillItem[] = [

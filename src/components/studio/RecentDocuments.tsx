@@ -1,5 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, MoreHorizontal, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  FileText, 
+  MoreHorizontal, 
+  ArrowRight, 
+  BookOpen, 
+  Edit3, 
+  Copy, 
+  Trash2,
+  X,
+  Check
+} from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { db } from '../../storage/DexieStorage';
 import type { Scene, Project } from '../../types';
@@ -26,6 +36,34 @@ export const RecentDocuments: React.FC = () => {
   } = useInkFlowStore();
 
   const [documents, setDocuments] = useState<DynamicDocItem[]>([]);
+  const [activeMenuDocId, setActiveMenuDocId] = useState<string | null>(null);
+  const [renameDoc, setRenameDoc] = useState<DynamicDocItem | null>(null);
+  const [renameTitleInput, setRenameTitleInput] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close menu on click outside or Escape
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenuDocId(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveMenuDocId(null);
+        setRenameDoc(null);
+      }
+    };
+
+    window.addEventListener('mousedown', handleGlobalClick);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', handleGlobalClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,9 +76,10 @@ export const RecentDocuments: React.FC = () => {
           projectMap.set(p.id, p);
         }
 
+        const now = Date.now();
         const items: DynamicDocItem[] = scenes.map((s) => {
           const proj = projectMap.get(s.projectId);
-          const diffMs = Date.now() - (s.updatedAt || Date.now());
+          const diffMs = now - (s.updatedAt || now);
           const diffMins = Math.floor(diffMs / 60000);
           const diffHours = Math.floor(diffMins / 60);
           const diffDays = Math.floor(diffHours / 24);
@@ -72,7 +111,7 @@ export const RecentDocuments: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   const handleOpenDoc = (doc: DynamicDocItem) => {
     setActiveProjectId(doc.projectId);
@@ -81,6 +120,65 @@ export const RecentDocuments: React.FC = () => {
     setActiveChapterTitle(doc.title);
     setActiveSceneId(doc.sceneId);
     setCurrentScreen('editor');
+  };
+
+  const handleStartRename = (e: React.MouseEvent, doc: DynamicDocItem) => {
+    e.stopPropagation();
+    setActiveMenuDocId(null);
+    setRenameDoc(doc);
+    setRenameTitleInput(doc.title);
+  };
+
+  const handleSaveRename = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renameDoc || !renameTitleInput.trim()) return;
+
+    try {
+      const now = Date.now();
+      await db.scenes.update(renameDoc.sceneId, {
+        title: renameTitleInput.trim(),
+        updatedAt: now
+      });
+      setRenameDoc(null);
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      console.warn('Failed to rename scene:', err);
+    }
+  };
+
+  const handleDuplicateDoc = async (e: React.MouseEvent, doc: DynamicDocItem) => {
+    e.stopPropagation();
+    setActiveMenuDocId(null);
+    try {
+      const existing = await db.scenes.get(doc.sceneId);
+      if (!existing) return;
+
+      const now = Date.now();
+      const newSceneId = `sc-${now}-${Math.random().toString(36).slice(2, 6)}`;
+      await db.scenes.add({
+        ...existing,
+        id: newSceneId,
+        title: `${doc.title} (Copy)`,
+        createdAt: now,
+        updatedAt: now
+      });
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      console.warn('Failed to duplicate scene:', err);
+    }
+  };
+
+  const handleDeleteDoc = async (e: React.MouseEvent, doc: DynamicDocItem) => {
+    e.stopPropagation();
+    setActiveMenuDocId(null);
+    if (!window.confirm(`Are you sure you want to remove "${doc.title}"?`)) return;
+
+    try {
+      await db.scenes.delete(doc.sceneId);
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      console.warn('Failed to delete scene:', err);
+    }
   };
 
   const getBadgeStyle = (genre: string) => {
@@ -93,7 +191,7 @@ export const RecentDocuments: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 relative">
       <div className="flex items-center justify-between">
         <h3 className="font-serif text-lg font-semibold text-[#25251F]">
           Recent documents
@@ -109,7 +207,7 @@ export const RecentDocuments: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-[#FAF7F2] border border-[#E3DDD3] rounded-2xl overflow-hidden shadow-2xs divide-y divide-[#EBE5DA]">
+      <div className="bg-[#FAF7F2] border border-[#E3DDD3] rounded-2xl overflow-visible shadow-2xs divide-y divide-[#EBE5DA]">
         {documents.length === 0 ? (
           <div className="p-6 text-center text-xs text-[#7A7469] font-serif italic">
             No recent manuscripts yet. Choose a format above to start writing.
@@ -119,7 +217,7 @@ export const RecentDocuments: React.FC = () => {
             <div
               key={doc.sceneId}
               onClick={() => handleOpenDoc(doc)}
-              className="flex items-center justify-between px-4 py-3 hover:bg-[#F3EEE5] transition-colors cursor-pointer group"
+              className="flex items-center justify-between px-4 py-3 hover:bg-[#F3EEE5] transition-colors cursor-pointer group relative"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="p-1.5 rounded-lg bg-[#EFE9DF] text-[#69645B] group-hover:bg-[#E5DFD4] group-hover:text-[#25251F] transition-colors shrink-0">
@@ -135,7 +233,7 @@ export const RecentDocuments: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 shrink-0">
+              <div className="flex items-center gap-4 shrink-0 relative">
                 <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${getBadgeStyle(doc.genre)}`}>
                   {doc.genre}
                 </span>
@@ -145,17 +243,132 @@ export const RecentDocuments: React.FC = () => {
                 <span className="text-xs text-[#807A70] hidden sm:inline">
                   {doc.timeAgo}
                 </span>
-                <button 
-                  onClick={(e) => e.stopPropagation()}
-                  className="p-1 text-[#8A847A] hover:text-[#25251F] rounded-md transition-colors"
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
+
+                {/* Options Button */}
+                <div className="relative">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMenuDocId(activeMenuDocId === doc.sceneId ? null : doc.sceneId);
+                    }}
+                    title="Document options"
+                    className="p-1.5 text-[#8A847A] hover:text-[#25251F] hover:bg-[#EAE4D7] rounded-lg transition-colors cursor-pointer"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+
+                  {/* Options Dropdown Menu */}
+                  {activeMenuDocId === doc.sceneId && (
+                    <div 
+                      ref={menuRef}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-8 w-44 bg-[#FAF7F2] border border-[#DDD5C7] rounded-xl shadow-lg p-1.5 z-50 text-xs font-sans divide-y divide-[#EFEAE0]"
+                    >
+                      <div className="space-y-0.5 pb-1">
+                        <button
+                          onClick={() => {
+                            setActiveMenuDocId(null);
+                            handleOpenDoc(doc);
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-[#7A7469]" />
+                          <span>Open in Editor</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => handleStartRename(e, doc)}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-[#7A7469]" />
+                          <span>Rename</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => handleDuplicateDoc(e, doc)}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-[#7A7469]" />
+                          <span>Duplicate</span>
+                        </button>
+                      </div>
+
+                      <div className="pt-1">
+                        <button
+                          onClick={(e) => handleDeleteDoc(e, doc)}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#FCEBE6] text-[#C77B5B] flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Rename Document Modal */}
+      {renameDoc && (
+        <div 
+          onClick={() => setRenameDoc(null)}
+          className="fixed inset-0 bg-black/35 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4 font-sans"
+          >
+            <div className="flex items-center justify-between border-b border-[#EBE5DA] pb-3">
+              <h3 className="font-serif font-bold text-base text-[#25251F]">
+                Rename Document
+              </h3>
+              <button 
+                onClick={() => setRenameDoc(null)}
+                className="p-1 rounded-lg hover:bg-[#EAE4D7] text-[#7A7469] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRename} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#656057] mb-1">
+                  Document Title
+                </label>
+                <input
+                  type="text"
+                  value={renameTitleInput}
+                  onChange={(e) => setRenameTitleInput(e.target.value)}
+                  autoFocus
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-[#D5CEC2] text-sm text-[#25251F] focus:outline-none focus:ring-1 focus:ring-[#3F5236]"
+                  placeholder="e.g. Chapter 01 — The Letter"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRenameDoc(null)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!renameTitleInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
