@@ -17,7 +17,10 @@ import { useInkFlowStore } from '../store/useInkFlowStore';
 import { db } from '../storage/DexieStorage';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
 import { requestOllamaCompletion } from '../lib/ollama';
-import type { DocumentType } from '../types';
+import { Card } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import type { DocumentType } from '../types';
 
 function getNow(): number {
   return Date.now();
@@ -120,22 +124,22 @@ export const Templates: React.FC = () => {
       icon: Mail,
       tags: ['# Professional', '# Personal'],
       chapters: [
-        { title: 'Subject & Opening', prompt: 'Warm, respectful opening establishing the context.' },
-        { title: 'Body & Key Update', prompt: 'Clear paragraphs explaining the rationale.' },
-        { title: 'Call to Action', prompt: 'Next steps with polite appreciation.' }
+        { title: 'Subject & Salutation', prompt: 'Clear intent and warm opening.' },
+        { title: 'The Core Request', prompt: 'State the premise and action required.' },
+        { title: 'Context & Next Steps', prompt: 'Polite wrap-up and timeline expectations.' }
       ]
     },
     {
       id: 'tmpl-story-series',
       title: 'Story Series',
-      description: 'Build a connected series of stories with a consistent style and world.',
+      description: 'Build a connected series of stories with a consistent style.',
       category: 'Story',
       icon: Layers,
       tags: ['# Series', '# Worldbuilding'],
       chapters: [
-        { title: 'Dispatch 01 — The First Valley', prompt: 'Introduce the shared environment through a lone traveler.' },
-        { title: 'Dispatch 02 — The Crossing', prompt: 'Show the same world through a contrasting perspective.' },
-        { title: 'Dispatch 03 — Convergence', prompt: 'Threads from previous dispatches intertwine.' }
+        { title: 'Episode 01 — The First Encounter', prompt: 'Introduce the world and core dynamic.' },
+        { title: 'Episode 02 — Shifting Tides', prompt: 'Secondary conflict and mystery escalation.' },
+        { title: 'Episode 03 — The Convergence', prompt: 'Parallel storylines meet at a central point.' }
       ]
     },
     {
@@ -146,43 +150,51 @@ export const Templates: React.FC = () => {
       icon: Sparkles,
       tags: ['# Flexible', '# AI-powered'],
       chapters: [
-        { title: 'Chapter 01 — Discovery', prompt: 'Generated based on your custom prompt.' }
+        { title: 'Part I — The Beginning', prompt: 'Custom prompt defined during generation.' },
+        { title: 'Part II — Development', prompt: 'Exploration and deepening.' },
+        { title: 'Part III — Culmination', prompt: 'Final delivery.' }
       ]
     }
   ];
 
   const categories = ['All Templates', 'Novel', 'Short Story', 'Story', 'Blog', 'Email', 'Article', 'Other'];
 
-  const filtered = builtInTemplates.filter(t => {
-    const matchesCat = activeCategory === 'All Templates' || t.category === activeCategory;
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCat && matchesSearch;
+  const filtered = builtInTemplates.filter((tmpl) => {
+    const matchCat = activeCategory === 'All Templates' || tmpl.category === activeCategory;
+    const matchSearch = tmpl.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tmpl.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tmpl.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchCat && matchSearch;
   });
 
   const handleUseTemplate = async (tmpl: TemplateCardData) => {
-    const now = getNow();
-    const projectId = `proj-${now}`;
-    const firstChapter = tmpl.chapters[0];
-    const firstChapterId = `ch-${now}-0`;
-    const firstSceneId = `sc-${now}-0`;
+    if (tmpl.id === 'tmpl-custom-ai') {
+      setAiModalOpen(true);
+      return;
+    }
 
+    const now = getNow();
+    const projectId = `proj-tmpl-${now}`;
+    const firstChapterId = `ch-tmpl-${now}-0`;
+    const firstSceneId = `sc-tmpl-${now}-0`;
+
+    // 1. Create project
     await db.projects.add({
       id: projectId,
       title: `Untitled ${tmpl.title}`,
       genre: tmpl.category,
-      targetWordCount: tmpl.category === 'Novel' ? 60000 : 3000,
+      targetWordCount: tmpl.category === 'Novel' ? 60000 : 5000,
       description: tmpl.description,
       activeSceneId: firstSceneId,
       createdAt: now,
       updatedAt: now,
     });
 
+    // 2. Create chapters & initial scenes
     for (let i = 0; i < tmpl.chapters.length; i++) {
       const ch = tmpl.chapters[i];
-      const chId = `ch-${now}-${i}`;
-      const scId = `sc-${now}-${i}`;
+      const chId = `ch-tmpl-${now}-${i}`;
+      const scId = `sc-tmpl-${now}-${i}`;
 
       await db.chapters.add({
         id: chId,
@@ -214,7 +226,7 @@ export const Templates: React.FC = () => {
     setActiveProjectId(projectId);
     setActiveProjectTitle(`Untitled ${tmpl.title}`);
     setActiveChapterId(firstChapterId);
-    setActiveChapterTitle(firstChapter.title);
+    setActiveChapterTitle(tmpl.chapters[0].title);
     setActiveSceneId(firstSceneId);
     setActiveDocumentType(mapCategoryToDocType(tmpl.category));
     setCurrentScreen('editor');
@@ -288,21 +300,22 @@ Chapter Title | Brief Scene Objective`;
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
+          <Button
+            variant="outline"
             onClick={() => setCurrentScreen('editor')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border border-[#DDD5C7] text-xs font-medium text-[#403D37] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#DDD5C7] text-xs font-medium text-[#403D37] cursor-pointer"
           >
             <PenTool className="w-3.5 h-3.5 text-[#7C776E]" />
             <span>Create from draft</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => setAiModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold shadow-xs hover:shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Template</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -324,20 +337,20 @@ Chapter Title | Brief Scene Objective`;
           ))}
         </div>
 
-        <div className="relative w-full sm:w-56 shrink-0">
+        <div className="relative w-full sm:w-60 shrink-0">
           <Search className="w-3.5 h-3.5 text-[#8A847A] absolute left-3 top-2.5" />
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search templates..."
-            className="w-full text-xs pl-8.5 pr-3 py-1.5 rounded-xl bg-[#FAF7F2] border border-[#E0D8CB] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:border-[#3E5535]"
+            className="w-full text-xs pl-8.5 pr-3 py-1.5 rounded-xl bg-[#FAF7F2] border-[#E0D8CB] text-[#25251F] placeholder-[#9E988D] focus-visible:ring-1 focus-visible:ring-[#3E5535]"
           />
         </div>
       </div>
 
       {/* Hero Banner: Turn an idea into a template with Procedural Books & Quill Art */}
-      <div className="bg-[#FAF7F2] border border-[#E3DDD3] rounded-2xl overflow-hidden shadow-2xs relative flex flex-col md:flex-row items-center justify-between p-6 md:p-8 gap-6">
+      <Card className="bg-[#FAF7F2] border-[#E3DDD3] rounded-2xl overflow-hidden shadow-2xs relative flex flex-col md:flex-row items-center justify-between p-6 md:p-8 gap-6">
         <div className="flex-1 space-y-3 z-10">
           <div className="flex items-center gap-1.5 text-xs font-serif font-bold text-[#8C5843]">
             <Sparkles className="w-4 h-4 text-[#C77B5B]" />
@@ -349,13 +362,13 @@ Chapter Title | Brief Scene Objective`;
           </p>
 
           <div>
-            <button
+            <Button
               onClick={() => setAiModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-2xs hover:shadow-xs cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Generate with AI</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -363,7 +376,7 @@ Chapter Title | Brief Scene Objective`;
         <div className="w-full md:w-80 h-32 md:h-36 shrink-0 relative overflow-hidden rounded-xl">
           <ProceduralArt theme="books-quill" className="w-full h-full object-cover" />
         </div>
-      </div>
+      </Card>
 
       {/* Popular Templates Section */}
       <div className="space-y-4 pt-2">
@@ -380,10 +393,10 @@ Chapter Title | Brief Scene Objective`;
           {filtered.map((tmpl) => {
             const Icon = tmpl.icon;
             return (
-              <div
+              <Card
                 key={tmpl.id}
                 onClick={() => handleUseTemplate(tmpl)}
-                className="group bg-[#FAF7F2] hover:bg-[#F3EEE5] border border-[#E3DDD3] hover:border-[#CCD8C2] rounded-2xl p-5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-4"
+                className="group bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] hover:border-[#CCD8C2] rounded-2xl p-5 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-4 gap-0"
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between">
@@ -411,14 +424,14 @@ Chapter Title | Brief Scene Objective`;
                 <div className="pt-3 border-t border-[#E8E2D7] flex items-center justify-between">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {tmpl.tags.map((tag) => (
-                      <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#ECE5D8] text-[#555047]">
+                      <Badge key={tag} variant="outline" className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#ECE5D8] text-[#555047] border-[#DFD8CC]">
                         {tag}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-[#8A847A] group-hover:text-[#25251F] group-hover:translate-x-0.5 transition-all" />
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -455,17 +468,18 @@ Chapter Title | Brief Scene Objective`;
             </div>
 
             <DialogFooter className="flex items-center justify-end gap-2 pt-2 bg-transparent border-none p-0">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setAiModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
+                className="rounded-xl border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] cursor-pointer"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={!aiIdeaPrompt.trim() || isAIGenerating}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white font-semibold shadow-xs disabled:opacity-40 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white font-semibold shadow-xs disabled:opacity-40 cursor-pointer"
               >
                 {isAIGenerating ? (
                   <>
@@ -478,7 +492,7 @@ Chapter Title | Brief Scene Objective`;
                     <span>Create Template</span>
                   </>
                 )}
-              </button>
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

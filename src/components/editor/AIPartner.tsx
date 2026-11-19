@@ -8,6 +8,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { ModelSelector } from './ModelSelector';
+import { Card } from '../ui/card';
 
 interface AIPartnerProps {
   onContinue: (instruction?: string) => void;
@@ -83,11 +84,12 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
         {actions.map((act) => {
           const Icon = act.icon;
           return (
-            <button
+            <Card
               key={act.id}
               onClick={act.onClick}
-              disabled={isLoading}
-              className="w-full text-left p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border border-[#E3DDD3] transition-all flex items-start gap-3 group shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-50"
+              className={`w-full text-left p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] transition-all flex items-start gap-3 group shadow-2xs hover:shadow-xs cursor-pointer ${
+                isLoading ? 'opacity-50 pointer-events-none' : ''
+              }`}
             >
               <div className="p-2 rounded-xl bg-[#EFE9DF] group-hover:bg-[#E3DDCF] text-[#524E46] group-hover:text-[#25251F] transition-colors shrink-0 mt-0.5">
                 <Icon className="w-4 h-4" />
@@ -100,14 +102,14 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
                   {act.desc}
                 </div>
               </div>
-            </button>
+            </Card>
           );
         })}
       </div>
 
       {/* Brainstorm Ideas Section if Available */}
       {brainstormIdeas.length > 0 && (
-        <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#DDD5C7] space-y-2.5 shadow-2xs">
+        <Card className="p-3.5 rounded-2xl bg-[#FAF7F2] border-[#DDD5C7] space-y-2.5 shadow-2xs gap-0">
           <div className="text-xs font-serif font-semibold text-[#25251F]">
             Brainstormed Directions
           </div>
@@ -123,7 +125,7 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {/* Natural Language Partner Prompt Input */}
@@ -144,7 +146,7 @@ export const AIPartner: React.FC<AIPartnerProps> = ({
             rows={3}
             disabled={isLoading}
             placeholder="e.g. Continue this scene with a quiet, atmospheric tone..."
-            className="w-full text-xs font-serif p-3 pr-10 rounded-2xl bg-[#FAF7F2] border border-[#DDD5C7] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:border-[#3E5535] focus:ring-1 focus:ring-[#3E5535] resize-none shadow-2xs leading-relaxed disabled:opacity-50"
+            className="w-full text-xs font-serif p-3 pr-10 rounded-2xl bg-[#FAF7F2] border border-[#DDD5C7] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:border-[#3E5535] focus:ring-1 focus:ring-[#3F5236] resize-none shadow-2xs leading-relaxed disabled:opacity-50"
           />
           <button
             type="submit"

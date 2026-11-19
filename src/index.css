@@ -21,6 +21,28 @@
   --ink-terracotta-light: #FBF0EB;
 
   --ink-sand: #ECE5D8;
+
+  /* shadcn UI Token Mappings - Tailored to inkFlow Brand */
+  --background: #F5F1E9;
+  --foreground: #25251F;
+  --card: #FAF7F2;
+  --card-foreground: #25251F;
+  --popover: #FAF7F2;
+  --popover-foreground: #25251F;
+  --primary: #3F5236;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EAE4D7;
+  --secondary-foreground: #25251F;
+  --muted: #EFEAE0;
+  --muted-foreground: #706B62;
+  --accent: #EAE4D7;
+  --accent-foreground: #25251F;
+  --destructive: #C77B5B;
+  --destructive-foreground: #FFFFFF;
+  --border: #E3DDD3;
+  --input: #DDD5C7;
+  --ring: #3F5236;
+  --radius: 0.85rem;
 }
 
 /* Custom Scrollbar - Warm and understated */

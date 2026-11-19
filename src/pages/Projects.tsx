@@ -12,7 +12,17 @@ import {
 import { useInkFlowStore } from '../store/useInkFlowStore';
 import { db } from '../storage/DexieStorage';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
-import type { Project } from '../types';
+import { Card, CardContent } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '../components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
+import type { Project } from '../types';
 
 function getNow(): number {
   return Date.now();
@@ -39,7 +50,7 @@ function getNow(): number {
 interface ProjectWithStats extends Project {
   chapterCount: number;
   wordCount: number;
-  formatUnit: string; // 'chapters' | 'drafts' | 'posts' | 'stories'
+  formatUnit: string;
 }
 
 export const Projects: React.FC = () => {
@@ -56,9 +67,8 @@ export const Projects: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'All' | 'Novel' | 'Story' | 'Blog' | 'Series' | 'Other'>('All');
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'words'>('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectWithStats | null>(null);
 
   // New Project Form State
   const [newTitle, setNewTitle] = useState('');
@@ -152,35 +162,35 @@ export const Projects: React.FC = () => {
     if (!newTitle.trim()) return;
 
     const now = getNow();
-    const projectId = `proj-${now}`;
-    const chapterId = `ch-${now}`;
-    const sceneId = `sc-${now}`;
+    const projId = `project-${now}-${Math.random().toString(36).slice(2, 6)}`;
+    const chId = `ch-${now}-1`;
+    const scId = `sc-${now}-1`;
 
     await db.projects.add({
-      id: projectId,
+      id: projId,
       title: newTitle.trim(),
       genre: newGenre,
       targetWordCount: newTargetWords,
-      description: `${newGenre} manuscript`,
-      activeSceneId: sceneId,
+      description: `New ${newGenre.toLowerCase()} project`,
+      activeSceneId: scId,
       createdAt: now,
       updatedAt: now,
     });
 
     await db.chapters.add({
-      id: chapterId,
-      projectId: projectId,
-      title: 'Chapter 01 — The Beginning',
+      id: chId,
+      projectId: projId,
+      title: 'Chapter 01',
       order: 1,
       createdAt: now,
       updatedAt: now,
     });
 
     await db.scenes.add({
-      id: sceneId,
-      chapterId: chapterId,
-      projectId: projectId,
-      title: 'Chapter 01 — The Beginning',
+      id: scId,
+      chapterId: chId,
+      projectId: projId,
+      title: 'Chapter 01',
       order: 1,
       beats: [],
       charactersPresent: [],
@@ -192,24 +202,21 @@ export const Projects: React.FC = () => {
       updatedAt: now,
     });
 
-    setIsNewProjectModalOpen(false);
     setNewTitle('');
+    setIsNewProjectModalOpen(false);
     setRefreshKey(k => k + 1);
 
-    setActiveProjectId(projectId);
+    setActiveProjectId(projId);
     setActiveProjectTitle(newTitle.trim());
-    setActiveChapterTitle('Chapter 01 — The Beginning');
-    setActiveSceneId(sceneId);
+    setActiveChapterTitle('Chapter 01');
+    setActiveSceneId(scId);
     setCurrentScreen('editor');
   };
 
-  const [projectToDelete, setProjectToDelete] = useState<ProjectWithStats | null>(null);
-
-  const handleDeleteProject = (e: React.MouseEvent, proj: ProjectWithStats) => {
+  const handleDeleteProject = (e: React.MouseEvent, p: ProjectWithStats) => {
     e.stopPropagation();
-    if (projects.length <= 1) return; // Keep at least one
-    setActiveMenuId(null);
-    setProjectToDelete(proj);
+    if (projects.length <= 1) return;
+    setProjectToDelete(p);
   };
 
   const handleConfirmDeleteProject = async () => {
@@ -221,11 +228,10 @@ export const Projects: React.FC = () => {
       setProjectToDelete(null);
       setRefreshKey(k => k + 1);
     } catch (err) {
-      console.warn('Failed to delete project:', err);
+      console.error('Failed to delete project:', err);
     }
   };
 
-  // Tab counts
   const tabCounts = useMemo(() => {
     return {
       all: projects.length,
@@ -250,13 +256,13 @@ export const Projects: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={() => setIsNewProjectModalOpen(true)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Project</span>
-        </button>
+        </Button>
       </div>
 
       {/* Filter Tabs & Controls Row */}
@@ -317,54 +323,42 @@ export const Projects: React.FC = () => {
           >
             Series <span className="text-[10px] opacity-70 ml-0.5">{tabCounts.series}</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('Other')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-              activeTab === 'Other'
-                ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold shadow-2xs'
-                : 'text-[#615C53] hover:bg-[#EAE4D7] hover:text-[#25251F]'
-            }`}
-          >
-            Others <span className="text-[10px] opacity-70 ml-0.5">{tabCounts.others}</span>
-          </button>
         </div>
 
-        {/* Sort & View Mode Toggle */}
-        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
-          {/* Sort Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border border-[#E3DDD3] text-xs font-medium text-[#403D37] transition-colors cursor-pointer"
-            >
-              <span>Sort: {sortBy === 'recent' ? 'Recent' : sortBy === 'title' ? 'Title' : 'Words'}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#7C776E]" />
-            </button>
-
-            {isSortDropdownOpen && (
-              <div className="absolute right-0 mt-1 w-36 bg-[#FAF7F2] border border-[#DDD5C7] rounded-xl shadow-lg p-1 z-30 text-xs">
-                <button
-                  onClick={() => { setSortBy('recent'); setIsSortDropdownOpen(false); }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg ${sortBy === 'recent' ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0]'}`}
-                >
-                  Recent
-                </button>
-                <button
-                  onClick={() => { setSortBy('title'); setIsSortDropdownOpen(false); }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg ${sortBy === 'title' ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0]'}`}
-                >
-                  Title
-                </button>
-                <button
-                  onClick={() => { setSortBy('words'); setIsSortDropdownOpen(false); }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg ${sortBy === 'words' ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0]'}`}
-                >
-                  Word count
-                </button>
-              </div>
-            )}
-          </div>
+        {/* Right Controls: Sort & Grid/List view */}
+        <div className="flex items-center gap-3">
+          {/* shadcn DropdownMenu for Sort */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] border-[#DDD5C7] text-xs font-medium text-[#403D37] hover:bg-[#F3EEE5] shadow-2xs cursor-pointer"
+              >
+                <span>Sort: {sortBy === 'recent' ? 'Recent' : sortBy === 'title' ? 'Title' : 'Words'}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#7C776E]" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36 bg-[#FAF7F2] border-[#DDD5C7] rounded-xl shadow-lg p-1 z-30 text-xs">
+              <DropdownMenuItem
+                onClick={() => setSortBy('recent')}
+                className={`rounded-lg cursor-pointer ${sortBy === 'recent' ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0]'}`}
+              >
+                Recent
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy('title')}
+                className={`rounded-lg cursor-pointer ${sortBy === 'title' ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0]'}`}
+              >
+                Title
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy('words')}
+                className={`rounded-lg cursor-pointer ${sortBy === 'words' ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0]'}`}
+              >
+                Word count
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Grid / List View Toggle */}
           <div className="flex items-center bg-[#FAF7F2] border border-[#E3DDD3] rounded-xl p-0.5">
@@ -392,10 +386,10 @@ export const Projects: React.FC = () => {
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProjects.map((proj) => (
-            <div
+            <Card
               key={proj.id}
               onClick={() => handleOpenProject(proj)}
-              className="group bg-[#FAF7F2] hover:bg-[#F3EEE5] border border-[#E3DDD3] rounded-2xl overflow-hidden shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col relative"
+              className="group bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] rounded-2xl overflow-hidden shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col relative p-0 gap-0"
             >
               {/* Procedural / Dynamic Cover Art */}
               <div className="h-44 w-full relative overflow-hidden bg-[#ECE5D8]">
@@ -403,52 +397,57 @@ export const Projects: React.FC = () => {
                 
                 {/* Three-dots menu button */}
                 <div className="absolute top-2.5 right-2.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuId(activeMenuId === proj.id ? null : proj.id);
-                    }}
-                    className="p-1.5 rounded-xl bg-black/35 hover:bg-black/55 text-white backdrop-blur-xs transition-colors cursor-pointer"
-                  >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
-                  </button>
-
-                  {activeMenuId === proj.id && (
-                    <div 
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-7 w-7 p-0 rounded-xl bg-black/35 hover:bg-black/55 text-white backdrop-blur-xs transition-colors cursor-pointer"
+                        title="Project options"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 mt-1 w-36 bg-[#FAF7F2] border border-[#DDD5C7] rounded-xl shadow-lg p-1 z-40 text-xs"
+                      className="w-36 bg-[#FAF7F2] border-[#DDD5C7] rounded-xl shadow-lg p-1 z-40 text-xs"
                     >
-                      <button
+                      <DropdownMenuItem
                         onClick={() => handleOpenProject(proj)}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#3A3731]"
+                        className="rounded-lg hover:bg-[#EFEAE0] text-[#3A3731] cursor-pointer"
                       >
                         Open Editor
-                      </button>
+                      </DropdownMenuItem>
                       {projects.length > 1 && (
-                        <button
-                          onClick={(e) => handleDeleteProject(e, proj)}
-                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] flex items-center gap-1.5"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
+                        <>
+                          <DropdownMenuSeparator className="bg-[#EFEAE0] my-1" />
+                          <DropdownMenuItem
+                            onClick={(e) => handleDeleteProject(e, proj)}
+                            className="rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] focus:text-[#C77B5B] focus:bg-[#FBEBEB] flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </>
                       )}
-                    </div>
-                  )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
               {/* Card Body */}
-              <div className="p-4 flex flex-col justify-between flex-1 space-y-3">
+              <CardContent className="p-4 flex flex-col justify-between flex-1 space-y-3">
                 <div>
                   <h3 className="font-serif font-bold text-base text-[#25251F] group-hover:text-[#181814] truncate">
                     {proj.title}
                   </h3>
 
                   <div className="mt-1">
-                    <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-md bg-[#EAE4D7] text-[#555047] border border-[#DCD5C8]">
+                    <Badge variant="outline" className="text-[11px] font-medium bg-[#EAE4D7] text-[#555047] border-[#DCD5C8] px-2 py-0.5 rounded-md">
                       {proj.genre}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
 
@@ -463,13 +462,13 @@ export const Projects: React.FC = () => {
                     <span>{proj.wordCount.toLocaleString()} words</span>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
         /* List View */
-        <div className="bg-[#FAF7F2] border border-[#E3DDD3] rounded-2xl overflow-hidden divide-y divide-[#EBE5DA] shadow-2xs">
+        <Card className="bg-[#FAF7F2] border-[#E3DDD3] rounded-2xl overflow-hidden divide-y divide-[#EBE5DA] shadow-2xs p-0 gap-0">
           {filteredProjects.map((proj) => (
             <div
               key={proj.id}
@@ -484,25 +483,29 @@ export const Projects: React.FC = () => {
                   <h3 className="font-serif font-bold text-sm text-[#25251F] group-hover:text-[#181814] truncate">
                     {proj.title}
                   </h3>
-                  <span className="text-[11px] text-[#7A7469]">
+                  <Badge variant="outline" className="text-[10px] text-[#7A7469] mt-0.5">
                     {proj.genre}
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
               <div className="flex items-center gap-6 shrink-0 text-xs text-[#706B62] font-mono">
                 <span>{proj.chapterCount} {proj.formatUnit}</span>
                 <span>{proj.wordCount.toLocaleString()} words</span>
-                <button
-                  onClick={(e) => handleDeleteProject(e, proj)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-[#8A847A] hover:text-[#C77B5B] rounded transition-opacity"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {projects.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteProject(e, proj)}
+                    className="opacity-0 group-hover:opacity-100 h-8 w-8 text-[#8A847A] hover:text-[#C77B5B] hover:bg-[#FCEBE6] rounded-lg transition-opacity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       )}
 
       {/* shadcn Dialog: Create New Project */}
@@ -522,13 +525,13 @@ export const Projects: React.FC = () => {
               <label className="block font-semibold text-[#403D37] mb-1">
                 Project Title
               </label>
-              <input
+              <Input
                 autoFocus
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="e.g. The Silver Key, Nocturne Letters..."
-                className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
+                className="w-full bg-[#F4EFE6] border-[#DDD5C7] text-xs text-[#25251F] rounded-xl focus-visible:ring-1 focus-visible:ring-[#3E5535]"
               />
             </div>
 
@@ -554,29 +557,30 @@ export const Projects: React.FC = () => {
               <label className="block font-semibold text-[#403D37] mb-1">
                 Target Word Count
               </label>
-              <input
+              <Input
                 type="number"
                 value={newTargetWords}
                 onChange={(e) => setNewTargetWords(Number(e.target.value))}
-                className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
+                className="w-full bg-[#F4EFE6] border-[#DDD5C7] text-xs text-[#25251F] rounded-xl focus-visible:ring-1 focus-visible:ring-[#3E5535]"
               />
             </div>
 
             <DialogFooter className="flex items-center justify-end gap-2 pt-2 bg-transparent border-none p-0">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setIsNewProjectModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
+                className="rounded-xl border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] cursor-pointer"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={!newTitle.trim()}
-                className="px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white font-semibold shadow-xs disabled:opacity-40 transition-colors cursor-pointer"
+                className="rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white font-semibold shadow-xs disabled:opacity-40 cursor-pointer"
               >
                 Create Project
-              </button>
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

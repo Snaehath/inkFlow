@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ChevronDown, Check, X } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { buildDynamicModelOptions } from '../../lib/modelRouter';
 import { OllamaIcon } from '../icons/OllamaIcon';
+import { Button } from '../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from '../ui/dropdown-menu';
 
 export const ModelSelector: React.FC = () => {
   const { 
     selectedModel, 
     setSelectedModel, 
-    availableModels,
+    availableModels, 
     setModelRoutingMode,
     activeSkillName,
     setCurrentScreen,
@@ -16,7 +23,6 @@ export const ModelSelector: React.FC = () => {
     setGenerationMode
   } = useInkFlowStore();
 
-  const [isOpen, setIsOpen] = useState(false);
   const modelOptions = buildDynamicModelOptions(availableModels);
 
   return (
@@ -52,38 +58,39 @@ export const ModelSelector: React.FC = () => {
           <OllamaIcon className="w-3.5 h-3.5 text-[#25251F]" />
           <span>Ollama</span>
         </div>
-        <div className="relative">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-1.5 text-xs font-medium text-[#25251F] bg-[#FAF7F2] hover:bg-[#EFEAE0] border border-[#DDD5C7] px-2.5 py-1 rounded-xl transition-colors cursor-pointer max-w-[170px]"
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="flex items-center gap-1.5 text-xs font-medium text-[#25251F] bg-[#FAF7F2] hover:bg-[#EFEAE0] border-[#DDD5C7] px-2.5 py-1 rounded-xl transition-colors cursor-pointer max-w-[170px] h-auto"
+            >
+              <span className="truncate">{selectedModel}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#7C776E] shrink-0" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="end"
+            className="w-60 bg-[#FAF7F2] border-[#DDD5C7] rounded-xl shadow-lg p-1.5 z-50 text-xs"
           >
-            <span className="truncate">{selectedModel}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#7C776E] shrink-0" />
-          </button>
-
-          {isOpen && (
-            <div className="absolute right-0 bottom-full mb-1.5 w-60 bg-[#FAF7F2] border border-[#DDD5C7] rounded-xl shadow-lg p-1.5 z-50 text-xs">
-              <div className="max-h-56 overflow-y-auto space-y-0.5">
-                {modelOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      setSelectedModel(opt.label);
-                      setModelRoutingMode(opt.isAuto ? 'auto' : 'manual');
-                      setIsOpen(false);
-                    }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
-                      selectedModel === opt.label ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0] text-[#3D3A34]'
-                    }`}
-                  >
-                    <span className="truncate">{opt.label}</span>
-                    {selectedModel === opt.label && <Check className="w-3.5 h-3.5 text-[#35502A] shrink-0" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            {modelOptions.map((opt) => (
+              <DropdownMenuItem
+                key={opt.id}
+                onClick={() => {
+                  setSelectedModel(opt.label);
+                  setModelRoutingMode(opt.isAuto ? 'auto' : 'manual');
+                }}
+                className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between cursor-pointer ${
+                  selectedModel === opt.label ? 'bg-[#E1EAD9] text-[#2C3E25] font-semibold' : 'hover:bg-[#EFEAE0] text-[#3D3A34]'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {selectedModel === opt.label && <Check className="w-3.5 h-3.5 text-[#35502A] shrink-0" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Active Skill Row */}
@@ -97,9 +104,10 @@ export const ModelSelector: React.FC = () => {
           >
             {activeSkillName || 'Atmospheric fiction'}
           </button>
-          <button
+          <button 
             onClick={() => setCurrentScreen('skills')}
-            className="text-[#688262] hover:text-[#25251F] ml-1 cursor-pointer"
+            className="text-[#7A9E6F] hover:text-[#344D2E] cursor-pointer ml-0.5"
+            title="Change skill"
           >
             <X className="w-3 h-3" />
           </button>

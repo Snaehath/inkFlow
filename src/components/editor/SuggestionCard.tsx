@@ -1,6 +1,8 @@
 import React from 'react';
 import { Check, RotateCw, X } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
 
 interface SuggestionCardProps {
   onAccept: (text: string) => void;
@@ -23,7 +25,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({ onAccept, onTryA
   const selectedText = continuationSuggestions[selectedSuggestionIndex] || continuationSuggestions[0];
 
   return (
-    <div className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-4 shadow-md space-y-3 my-4 transition-all">
+    <Card className="bg-[#FAF7F2] border-[#DDD5C7] rounded-2xl p-4 shadow-md space-y-3 my-4 transition-all gap-0">
       {/* Header */}
       <div className="flex items-center justify-between text-xs text-[#706B62] border-b border-[#EBE4D8] pb-2">
         <span className="font-semibold text-[#25251F] font-serif">
@@ -68,31 +70,33 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({ onAccept, onTryA
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
-          <button
+          <Button
             onClick={() => onAccept(selectedText)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Accept</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="outline"
             onClick={onTryAnother}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#DDD5C7] hover:bg-[#ECE5D8] text-[#4A4740] text-xs font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-[#DDD5C7] hover:bg-[#ECE5D8] text-[#4A4740] text-xs font-medium transition-colors cursor-pointer"
           >
             <RotateCw className="w-3.5 h-3.5" />
             <span>Try another</span>
-          </button>
+          </Button>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
           onClick={dismissSuggestions}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-[#8A847A] hover:text-[#25251F] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
         >
           <X className="w-3.5 h-3.5" />
           <span>Dismiss</span>
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 };

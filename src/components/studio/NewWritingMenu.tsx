@@ -2,6 +2,7 @@ import React from 'react';
 import { Book, Library, FileText, Mail, Feather } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { db } from '../../storage/DexieStorage';
+import { Card } from '../ui/card';
 import type { DocumentType } from '../../types';
 
 function createEntityId(prefix: string): string {
@@ -116,7 +117,6 @@ export const NewWritingMenu: React.FC = () => {
       updatedAt: now,
     });
 
-    // Set state & open editor
     setActiveProjectId(newProjectId);
     setActiveProjectTitle(format.defaultTitle);
     setActiveChapterId(newChapterId);
@@ -127,29 +127,24 @@ export const NewWritingMenu: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3">
-      <h3 className="font-serif text-lg font-semibold text-[#25251F]">
-        Start something new
-      </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {writingFormats.map((format) => {
-          const Icon = format.icon;
-          return (
-            <button
-              key={format.type}
-              onClick={() => handleStartWriting(format)}
-              className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border border-[#E3DDD3] transition-all group text-center shadow-2xs hover:shadow-xs hover:-translate-y-0.5 cursor-pointer"
-            >
-              <div className="w-10 h-10 rounded-xl bg-[#EFE9DF] group-hover:bg-[#E3DDD1] flex items-center justify-center text-[#59554C] group-hover:text-[#25251F] transition-colors">
-                <Icon className="w-5 h-5" />
-              </div>
-              <span className="font-medium text-xs text-[#38352F] group-hover:text-[#181814]">
-                {format.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {writingFormats.map((format) => {
+        const Icon = format.icon;
+        return (
+          <Card
+            key={format.type}
+            onClick={() => handleStartWriting(format)}
+            className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl bg-[#FAF7F2] hover:bg-[#F3EEE5] border-[#E3DDD3] transition-all group text-center shadow-2xs hover:shadow-xs hover:-translate-y-0.5 cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#EFE9DF] group-hover:bg-[#E3DDD1] flex items-center justify-center text-[#59554C] group-hover:text-[#25251F] transition-colors">
+              <Icon className="w-5 h-5" />
+            </div>
+            <span className="font-medium text-xs text-[#38352F] group-hover:text-[#181814]">
+              {format.label}
+            </span>
+          </Card>
+        );
+      })}
     </div>
   );
 };

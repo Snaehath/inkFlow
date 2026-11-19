@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Sparkles, Check, Search } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Badge } from '../ui/badge';
+import { Card } from '../ui/card';
 
 export const SkillLibrary: React.FC = () => {
   const { 
@@ -34,29 +38,29 @@ export const SkillLibrary: React.FC = () => {
             Skill Library
           </h3>
           <span className="text-[11px] text-[#78736A]">
-            {savedSkills.length} templates
+            {savedSkills.length} {savedSkills.length === 1 ? 'skill' : 'skills'}
           </span>
         </div>
 
-        <button
+        <Button
           onClick={createNewSkill}
           title="Create fresh skill template"
-          className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          className="flex items-center gap-1 px-2.5 py-1 h-auto rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New</span>
-        </button>
+        </Button>
       </div>
 
       {/* Quick Search */}
       <div className="relative">
         <Search className="w-3.5 h-3.5 text-[#8A847A] absolute left-2.5 top-2.5" />
-        <input
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter skills..."
-          className="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl bg-[#F4EFE6] border border-[#E0D8CB] text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:border-[#3E5535]"
+          className="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl bg-[#F4EFE6] border-[#E0D8CB] text-[#25251F] placeholder-[#9E988D] focus-visible:ring-1 focus-visible:ring-[#3E5535]"
         />
       </div>
 
@@ -65,10 +69,10 @@ export const SkillLibrary: React.FC = () => {
         {filteredSkills.map((skill) => {
           const isActive = activeSkillId === skill.id;
           return (
-            <div
+            <Card
               key={skill.id}
               onClick={() => loadSkill(skill.id)}
-              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer group flex flex-col justify-between ${
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer group flex flex-col justify-between gap-0 ${
                 isActive
                   ? 'bg-[#E1EAD9] border-[#B9CCA9] text-[#25251F] shadow-2xs'
                   : 'bg-[#FAF7F2] border-[#E8E2D7] text-[#5C574F] hover:bg-[#F3EEE5]'
@@ -103,9 +107,9 @@ export const SkillLibrary: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between text-[10px] text-[#8C867C] mt-2 pt-1.5 border-t border-black/5">
-                <span className="px-1.5 py-0.5 rounded bg-black/5 font-mono text-[9px]">
+                <Badge variant="outline" className="px-1.5 py-0.5 rounded bg-black/5 text-[#5A544A] border-none font-mono text-[9px]">
                   {skill.category}
-                </span>
+                </Badge>
                 {isActive && (
                   <span className="text-[#35502A] font-medium flex items-center gap-1 text-[10px]">
                     <Sparkles className="w-2.5 h-2.5" />
@@ -113,7 +117,7 @@ export const SkillLibrary: React.FC = () => {
                   </span>
                 )}
               </div>
-            </div>
+            </Card>
           );
         })}
 

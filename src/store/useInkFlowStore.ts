@@ -133,12 +133,12 @@ export const useInkFlowStore = create<InkFlowState>((set) => ({
 
   activeMode: 'write',
   activeProjectId: 'project-glass-orchard',
-  activeChapterId: 'ch-04',
-  activeSceneId: 'sc-04-1',
+  activeChapterId: 'ch-02',
+  activeSceneId: 'sc-02-1',
   activeDocumentType: 'novel',
 
   activeProjectTitle: 'The Glass Orchard',
-  activeChapterTitle: 'Chapter 04 — The Quiet Between',
+  activeChapterTitle: 'Chapter 02 — The Quiet Between',
   saveStatus: 'saved',
 
   // Skills

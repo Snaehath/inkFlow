@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, ArrowRight, MoreHorizontal, BookOpen, FolderKanban, RotateCcw } from 'lucide-react';
 import { useInkFlowStore } from '../store/useInkFlowStore';
 import { db, resetToCleanDefaults } from '../storage/DexieStorage';
@@ -6,6 +6,15 @@ import { NewWritingMenu } from '../components/studio/NewWritingMenu';
 import { RecentDocuments } from '../components/studio/RecentDocuments';
 import { ProjectCards } from '../components/studio/ProjectCards';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '../components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,9 +47,9 @@ interface ResumeCardInfo {
 
 export const Studio: React.FC = () => {
   const { 
-    setCurrentScreen,
+    setCurrentScreen, 
     setActiveProjectId,
-    setActiveProjectTitle,
+    setActiveProjectTitle, 
     setActiveChapterId,
     setActiveChapterTitle,
     setActiveSceneId,
@@ -48,20 +57,8 @@ export const Studio: React.FC = () => {
   } = useInkFlowStore();
 
   const [resumeInfo, setResumeInfo] = useState<ResumeCardInfo | null>(null);
-  const [isHeroMenuOpen, setIsHeroMenuOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const heroMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (heroMenuRef.current && !heroMenuRef.current.contains(e.target as Node)) {
-        setIsHeroMenuOpen(false);
-      }
-    };
-    window.addEventListener('mousedown', handleOutsideClick);
-    return () => window.removeEventListener('mousedown', handleOutsideClick);
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -160,6 +157,21 @@ export const Studio: React.FC = () => {
     setCurrentScreen('editor');
   };
 
+  const handleConfirmReset = async () => {
+    try {
+      const { projectId, sceneId } = await resetToCleanDefaults();
+      setActiveProjectId(projectId);
+      setActiveProjectTitle('The Glass Orchard');
+      setActiveChapterId('ch-01');
+      setActiveChapterTitle('Chapter 01 — Getting Started & Studio Guide');
+      setActiveSceneId(sceneId);
+      setIsResetDialogOpen(false);
+      setRefreshTrigger((prev) => prev + 1);
+    } catch (err) {
+      console.error('Failed to reset defaults:', err);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-8 py-8 max-w-5xl mx-auto w-full space-y-8 select-none">
       {/* Studio Header: Greeting & Quick Action */}
@@ -173,23 +185,23 @@ export const Studio: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={handleNewWriting}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New writing</span>
-        </button>
+        </Button>
       </div>
 
-      {/* Pick up where you left off Card - Fully Dynamic */}
+      {/* Hero Continue Card: Pick Up Where You Left Off */}
       {resumeInfo && (
-        <div className="space-y-3">
+        <section className="space-y-3">
           <h3 className="font-serif text-lg font-semibold text-[#25251F]">
             Pick up where you left off.
           </h3>
 
-          <div className="bg-[#FAF7F2] border border-[#E3DDD3] rounded-2xl p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <Card className="bg-[#FAF7F2] border-[#E3DDD3] rounded-2xl p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col sm:flex-row items-start sm:items-center gap-5">
             {/* Visual Scenic Cover Art (Dynamic Procedural) */}
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 shadow-xs relative border border-[#DDD6C8] bg-[#E9E3D6]">
               <ProceduralArt 
@@ -199,7 +211,7 @@ export const Studio: React.FC = () => {
             </div>
 
             {/* Story Details */}
-            <div className="flex-1 min-w-0">
+            <CardContent className="p-0 flex-1 min-w-0 w-full">
               <div className="flex items-start justify-between">
                 <div>
                   <h4 className="font-serif font-bold text-xl text-[#25251F] truncate">
@@ -209,59 +221,49 @@ export const Studio: React.FC = () => {
                     {resumeInfo.genre} — {resumeInfo.chapterTitle}
                   </div>
                 </div>
-                <div className="relative">
-                  <button 
-                    onClick={() => setIsHeroMenuOpen(!isHeroMenuOpen)}
-                    title="Story options"
-                    className="p-1.5 text-[#8A847A] hover:text-[#25251F] hover:bg-[#EAE4D7] rounded-lg transition-colors cursor-pointer"
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
 
-                  {isHeroMenuOpen && (
-                    <div 
-                      ref={heroMenuRef}
-                      className="absolute right-0 top-8 w-52 bg-[#FAF7F2] border border-[#DDD5C7] rounded-xl shadow-lg p-1.5 z-50 text-xs font-sans divide-y divide-[#EFEAE0]"
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0 text-[#8A847A] hover:text-[#25251F] hover:bg-[#EAE4D7] rounded-lg transition-colors cursor-pointer"
+                      title="Story options"
                     >
-                      <div className="space-y-0.5 pb-1">
-                        <button
-                          onClick={() => {
-                            setIsHeroMenuOpen(false);
-                            handleContinueWriting();
-                          }}
-                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
-                        >
-                          <BookOpen className="w-3.5 h-3.5 text-[#7A7469]" />
-                          <span>Continue Writing</span>
-                        </button>
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-52 bg-[#FAF7F2] border-[#DDD5C7] rounded-xl shadow-lg p-1.5 z-50 text-xs font-sans"
+                  >
+                    <DropdownMenuItem
+                      onClick={handleContinueWriting}
+                      className="px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-[#7A7469]" />
+                      <span>Continue Writing</span>
+                    </DropdownMenuItem>
 
-                        <button
-                          onClick={() => {
-                            setIsHeroMenuOpen(false);
-                            setCurrentScreen('projects');
-                          }}
-                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
-                        >
-                          <FolderKanban className="w-3.5 h-3.5 text-[#7A7469]" />
-                          <span>View in Projects</span>
-                        </button>
-                      </div>
+                    <DropdownMenuItem
+                      onClick={() => setCurrentScreen('projects')}
+                      className="px-2.5 py-1.5 rounded-lg hover:bg-[#EFEAE0] text-[#33302A] flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <FolderKanban className="w-3.5 h-3.5 text-[#7A7469]" />
+                      <span>View in Projects</span>
+                    </DropdownMenuItem>
 
-                      <div className="pt-1">
-                        <button
-                          onClick={() => {
-                            setIsHeroMenuOpen(false);
-                            setIsResetDialogOpen(true);
-                          }}
-                          className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] flex items-center gap-2 cursor-pointer transition-colors"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Reset to Clean Defaults</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    <DropdownMenuSeparator className="bg-[#EFEAE0] my-1" />
+
+                    <DropdownMenuItem
+                      onClick={() => setIsResetDialogOpen(true)}
+                      className="px-2.5 py-1.5 rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] focus:text-[#C77B5B] focus:bg-[#FBEBEB] flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset to Clean Defaults</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <p className="font-serif italic text-xs text-[#524E46] line-clamp-2 mt-2 leading-relaxed">
@@ -269,58 +271,60 @@ export const Studio: React.FC = () => {
               </p>
 
               <div className="mt-4 flex items-center gap-3">
-                <button
+                <Button
                   onClick={handleContinueWriting}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs hover:shadow-xs"
                 >
                   <span>Continue writing</span>
                   <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                </Button>
                 <span className="text-xs text-[#8A847A] font-mono">
                   {resumeInfo.wordCount.toLocaleString()} words logged
                 </span>
               </div>
-            </div>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
+        </section>
       )}
 
-      {/* Start something new (Story, Novel, Short Story, Email, Blog) */}
-      <NewWritingMenu />
+      {/* Start Something New: Format Quick Shortcuts */}
+      <section className="space-y-3">
+        <h3 className="font-serif text-lg font-semibold text-[#25251F]">
+          Start something new
+        </h3>
+        <NewWritingMenu />
+      </section>
 
-      {/* Recent Documents */}
-      <RecentDocuments />
+      {/* Recent Documents Section */}
+      <section>
+        <RecentDocuments />
+      </section>
 
-      {/* Your Projects */}
-      <ProjectCards />
+      {/* Visual Project Cards Grid */}
+      <section>
+        <ProjectCards />
+      </section>
 
-      {/* shadcn AlertDialog: Reset to Clean Studio Defaults */}
+      {/* Clean Defaults Confirmation Dialog */}
       <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <AlertDialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md shadow-xl text-[#25251F]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-serif text-lg font-bold text-[#25251F]">
-              Reset to Studio Defaults
+            <AlertDialogTitle className="font-serif text-xl font-bold text-[#25251F]">
+              Reset Studio Defaults?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-[#6B655A] leading-relaxed">
-              This will reset the studio to the default demonstration manuscripts (<em>The Glass Orchard</em>, <em>City Letters</em>, <em>Wandering Songs</em>) along with clean templates and writing guides.
+              This will restore inkFlow to the clean demonstration setup with the single default novel project (<em>The Glass Orchard</em>) and studio instructions. Any other drafts will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex gap-2 justify-end bg-transparent border-none p-0">
-            <AlertDialogCancel
-              onClick={() => setIsResetDialogOpen(false)}
-              className="rounded-xl px-3.5 py-2 text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] border border-[#D5CEC2] cursor-pointer"
-            >
+            <AlertDialogCancel className="rounded-xl px-3.5 py-2 text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] border border-[#D5CEC2] cursor-pointer">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={async () => {
-                await resetToCleanDefaults();
-                setIsResetDialogOpen(false);
-                setRefreshTrigger(k => k + 1);
-              }}
+              onClick={handleConfirmReset}
               className="rounded-xl px-4 py-2 bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold cursor-pointer"
             >
-              Reset Defaults
+              Reset to Defaults
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -6,6 +6,7 @@ import { SkillLibrary } from '../components/skills/SkillLibrary';
 import { SkillMarkdownEditor } from '../components/skills/SkillMarkdownEditor';
 import { AgentPreview } from '../components/skills/AgentPreview';
 import { SkillActions } from '../components/skills/SkillActions';
+import { Button } from '../components/ui/button';
 
 export const Skills: React.FC = () => {
   const { 
@@ -41,13 +42,13 @@ export const Skills: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={createNewSkill}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New skill</span>
-        </button>
+        </Button>
       </div>
 
       {/* 3-Column Skills Studio: Library | Markdown Editor | Agent Preview */}
