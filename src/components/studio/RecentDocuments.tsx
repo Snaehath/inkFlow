@@ -7,12 +7,29 @@ import {
   Edit3, 
   Copy, 
   Trash2,
-  X,
   Check
 } from 'lucide-react';
 import { useInkFlowStore } from '../../store/useInkFlowStore';
 import { db } from '../../storage/DexieStorage';
 import type { Scene, Project } from '../../types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 interface DynamicDocItem {
   sceneId: string;
@@ -39,6 +56,7 @@ export const RecentDocuments: React.FC = () => {
   const [activeMenuDocId, setActiveMenuDocId] = useState<string | null>(null);
   const [renameDoc, setRenameDoc] = useState<DynamicDocItem | null>(null);
   const [renameTitleInput, setRenameTitleInput] = useState('');
+  const [docToDelete, setDocToDelete] = useState<DynamicDocItem | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -53,7 +71,6 @@ export const RecentDocuments: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setActiveMenuDocId(null);
-        setRenameDoc(null);
       }
     };
 
@@ -168,13 +185,17 @@ export const RecentDocuments: React.FC = () => {
     }
   };
 
-  const handleDeleteDoc = async (e: React.MouseEvent, doc: DynamicDocItem) => {
+  const handleDeleteDoc = (e: React.MouseEvent, doc: DynamicDocItem) => {
     e.stopPropagation();
     setActiveMenuDocId(null);
-    if (!window.confirm(`Are you sure you want to remove "${doc.title}"?`)) return;
+    setDocToDelete(doc);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!docToDelete) return;
     try {
-      await db.scenes.delete(doc.sceneId);
+      await db.scenes.delete(docToDelete.sceneId);
+      setDocToDelete(null);
       setRefreshKey(k => k + 1);
     } catch (err) {
       console.warn('Failed to delete scene:', err);
@@ -311,64 +332,81 @@ export const RecentDocuments: React.FC = () => {
         )}
       </div>
 
-      {/* Rename Document Modal */}
-      {renameDoc && (
-        <div 
-          onClick={() => setRenameDoc(null)}
-          className="fixed inset-0 bg-black/35 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4 font-sans"
-          >
-            <div className="flex items-center justify-between border-b border-[#EBE5DA] pb-3">
-              <h3 className="font-serif font-bold text-base text-[#25251F]">
-                Rename Document
-              </h3>
-              <button 
-                onClick={() => setRenameDoc(null)}
-                className="p-1 rounded-lg hover:bg-[#EAE4D7] text-[#7A7469] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* shadcn Dialog: Rename Document */}
+      <Dialog open={!!renameDoc} onOpenChange={(open) => !open && setRenameDoc(null)}>
+        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md shadow-xl text-[#25251F]">
+          <DialogHeader className="pb-2 border-b border-[#EBE5DA]">
+            <DialogTitle className="font-serif font-bold text-base text-[#25251F]">
+              Rename Document
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#6B655A]">
+              Update the title for this manuscript chapter or scene.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveRename} className="space-y-4 pt-2">
+            <div>
+              <label className="block text-xs font-medium text-[#656057] mb-1">
+                Document Title
+              </label>
+              <input
+                type="text"
+                value={renameTitleInput}
+                onChange={(e) => setRenameTitleInput(e.target.value)}
+                autoFocus
+                className="w-full px-3 py-2 rounded-xl bg-white border border-[#D5CEC2] text-sm text-[#25251F] focus:outline-none focus:ring-1 focus:ring-[#3F5236]"
+                placeholder="e.g. Chapter 01 — The Letter"
+              />
             </div>
 
-            <form onSubmit={handleSaveRename} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[#656057] mb-1">
-                  Document Title
-                </label>
-                <input
-                  type="text"
-                  value={renameTitleInput}
-                  onChange={(e) => setRenameTitleInput(e.target.value)}
-                  autoFocus
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-[#D5CEC2] text-sm text-[#25251F] focus:outline-none focus:ring-1 focus:ring-[#3F5236]"
-                  placeholder="e.g. Chapter 01 — The Letter"
-                />
-              </div>
+            <DialogFooter className="flex justify-end gap-2 pt-2 bg-transparent border-none p-0">
+              <button
+                type="button"
+                onClick={() => setRenameDoc(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] transition-colors cursor-pointer border border-[#D5CEC2]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!renameTitleInput.trim()}
+                className="px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save</span>
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setRenameDoc(null)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!renameTitleInput.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Save</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* shadcn AlertDialog: Delete Document */}
+      <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
+        <AlertDialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md shadow-xl text-[#25251F]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-lg font-bold text-[#25251F]">
+              Delete Document
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-[#6B655A] leading-relaxed">
+              Are you sure you want to remove <strong className="text-[#25251F]">"{docToDelete?.title}"</strong>? This will remove the draft from your recent documents and local storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex gap-2 justify-end bg-transparent border-none p-0">
+            <AlertDialogCancel 
+              onClick={() => setDocToDelete(null)}
+              className="rounded-xl px-3.5 py-2 text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] border border-[#D5CEC2] cursor-pointer"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="rounded-xl px-4 py-2 bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold cursor-pointer"
+            >
+              Delete Document
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

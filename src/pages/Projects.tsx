@@ -7,13 +7,30 @@ import {
   Grid, 
   List, 
   ChevronDown, 
-  Trash2,
-  X
+  Trash2
 } from 'lucide-react';
 import { useInkFlowStore } from '../store/useInkFlowStore';
 import { db } from '../storage/DexieStorage';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
 import type { Project } from '../types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 
 function getNow(): number {
   return Date.now();
@@ -186,14 +203,26 @@ export const Projects: React.FC = () => {
     setCurrentScreen('editor');
   };
 
-  const handleDeleteProject = async (e: React.MouseEvent, id: string) => {
+  const [projectToDelete, setProjectToDelete] = useState<ProjectWithStats | null>(null);
+
+  const handleDeleteProject = (e: React.MouseEvent, proj: ProjectWithStats) => {
     e.stopPropagation();
     if (projects.length <= 1) return; // Keep at least one
-    await db.projects.delete(id);
-    await db.chapters.where('projectId').equals(id).delete();
-    await db.scenes.where('projectId').equals(id).delete();
     setActiveMenuId(null);
-    setRefreshKey(k => k + 1);
+    setProjectToDelete(proj);
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    try {
+      await db.projects.delete(projectToDelete.id);
+      await db.chapters.where('projectId').equals(projectToDelete.id).delete();
+      await db.scenes.where('projectId').equals(projectToDelete.id).delete();
+      setProjectToDelete(null);
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      console.warn('Failed to delete project:', err);
+    }
   };
 
   // Tab counts
@@ -397,7 +426,7 @@ export const Projects: React.FC = () => {
                       </button>
                       {projects.length > 1 && (
                         <button
-                          onClick={(e) => handleDeleteProject(e, proj.id)}
+                          onClick={(e) => handleDeleteProject(e, proj)}
                           className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] flex items-center gap-1.5"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -465,7 +494,7 @@ export const Projects: React.FC = () => {
                 <span>{proj.chapterCount} {proj.formatUnit}</span>
                 <span>{proj.wordCount.toLocaleString()} words</span>
                 <button
-                  onClick={(e) => handleDeleteProject(e, proj.id)}
+                  onClick={(e) => handleDeleteProject(e, proj)}
                   className="opacity-0 group-hover:opacity-100 p-1.5 text-[#8A847A] hover:text-[#C77B5B] rounded transition-opacity"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -476,87 +505,110 @@ export const Projects: React.FC = () => {
         </div>
       )}
 
-      {/* New Project Modal */}
-      {isNewProjectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D7]">
-              <h2 className="font-serif font-bold text-lg text-[#25251F]">
-                Create New Project
-              </h2>
-              <button 
-                onClick={() => setIsNewProjectModalOpen(false)}
-                className="p-1 text-[#8A847A] hover:text-[#25251F] rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* shadcn Dialog: Create New Project */}
+      <Dialog open={isNewProjectModalOpen} onOpenChange={setIsNewProjectModalOpen}>
+        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl max-w-md w-full p-6 shadow-xl text-[#25251F]">
+          <DialogHeader className="pb-2 border-b border-[#E8E2D7]">
+            <DialogTitle className="font-serif font-bold text-lg text-[#25251F]">
+              Create New Project
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#6B655A]">
+              Set up a structured writing workspace for your next novel, series, or collection.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateProject} className="space-y-4 text-xs pt-2">
+            <div>
+              <label className="block font-semibold text-[#403D37] mb-1">
+                Project Title
+              </label>
+              <input
+                autoFocus
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="e.g. The Silver Key, Nocturne Letters..."
+                className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
+              />
             </div>
 
-            <form onSubmit={handleCreateProject} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-[#403D37] mb-1">
-                  Project Title
-                </label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. The Silver Key, Nocturne Letters..."
-                  className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
-                />
-              </div>
+            <div>
+              <label className="block font-semibold text-[#403D37] mb-1">
+                Writing Format / Genre
+              </label>
+              <select
+                value={newGenre}
+                onChange={(e) => setNewGenre(e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
+              >
+                <option value="Novel">Novel</option>
+                <option value="Short Story">Short Story</option>
+                <option value="Story Collection">Story Collection</option>
+                <option value="Blog Series">Blog Series</option>
+                <option value="Email Series">Email Series</option>
+                <option value="Craft Essays">Craft Essays</option>
+              </select>
+            </div>
 
-              <div>
-                <label className="block font-semibold text-[#403D37] mb-1">
-                  Writing Format / Genre
-                </label>
-                <select
-                  value={newGenre}
-                  onChange={(e) => setNewGenre(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
-                >
-                  <option value="Novel">Novel</option>
-                  <option value="Short Story">Short Story</option>
-                  <option value="Story Collection">Story Collection</option>
-                  <option value="Blog Series">Blog Series</option>
-                  <option value="Email Series">Email Series</option>
-                  <option value="Craft Essays">Craft Essays</option>
-                </select>
-              </div>
+            <div>
+              <label className="block font-semibold text-[#403D37] mb-1">
+                Target Word Count
+              </label>
+              <input
+                type="number"
+                value={newTargetWords}
+                onChange={(e) => setNewTargetWords(Number(e.target.value))}
+                className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
+              />
+            </div>
 
-              <div>
-                <label className="block font-semibold text-[#403D37] mb-1">
-                  Target Word Count
-                </label>
-                <input
-                  type="number"
-                  value={newTargetWords}
-                  onChange={(e) => setNewTargetWords(Number(e.target.value))}
-                  className="w-full p-2.5 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] focus:outline-none focus:border-[#3E5535]"
-                />
-              </div>
+            <DialogFooter className="flex items-center justify-end gap-2 pt-2 bg-transparent border-none p-0">
+              <button
+                type="button"
+                onClick={() => setIsNewProjectModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!newTitle.trim()}
+                className="px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white font-semibold shadow-xs disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Create Project
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsNewProjectModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newTitle.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#C77B5B] hover:bg-[#B3684A] text-white font-semibold shadow-xs disabled:opacity-40 transition-colors cursor-pointer"
-                >
-                  Create Project
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* shadcn AlertDialog: Delete Project */}
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <AlertDialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md shadow-xl text-[#25251F]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-lg font-bold text-[#25251F]">
+              Delete Project
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-[#6B655A] leading-relaxed">
+              Are you sure you want to delete <strong className="text-[#25251F]">"{projectToDelete?.title}"</strong>? All chapters and scenes associated with this project will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex gap-2 justify-end bg-transparent border-none p-0">
+            <AlertDialogCancel
+              onClick={() => setProjectToDelete(null)}
+              className="rounded-xl px-3.5 py-2 text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] border border-[#D5CEC2] cursor-pointer"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteProject}
+              className="rounded-xl px-4 py-2 bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold cursor-pointer"
+            >
+              Delete Project
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

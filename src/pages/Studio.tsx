@@ -6,6 +6,16 @@ import { NewWritingMenu } from '../components/studio/NewWritingMenu';
 import { RecentDocuments } from '../components/studio/RecentDocuments';
 import { ProjectCards } from '../components/studio/ProjectCards';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 
 function createEntityId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -39,6 +49,7 @@ export const Studio: React.FC = () => {
 
   const [resumeInfo, setResumeInfo] = useState<ResumeCardInfo | null>(null);
   const [isHeroMenuOpen, setIsHeroMenuOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const heroMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -238,12 +249,9 @@ export const Studio: React.FC = () => {
 
                       <div className="pt-1">
                         <button
-                          onClick={async () => {
+                          onClick={() => {
                             setIsHeroMenuOpen(false);
-                            if (window.confirm('Reset workspace to clean studio defaults (The Glass Orchard, City Letters, clean templates)?')) {
-                              await resetToCleanDefaults();
-                              setRefreshTrigger(k => k + 1);
-                            }
+                            setIsResetDialogOpen(true);
                           }}
                           className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-[#FBEBEB] text-[#C77B5B] flex items-center gap-2 cursor-pointer transition-colors"
                         >
@@ -285,6 +293,38 @@ export const Studio: React.FC = () => {
 
       {/* Your Projects */}
       <ProjectCards />
+
+      {/* shadcn AlertDialog: Reset to Clean Studio Defaults */}
+      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <AlertDialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl p-6 max-w-md shadow-xl text-[#25251F]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-lg font-bold text-[#25251F]">
+              Reset to Studio Defaults
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-[#6B655A] leading-relaxed">
+              This will reset the studio to the default demonstration manuscripts (<em>The Glass Orchard</em>, <em>City Letters</em>, <em>Wandering Songs</em>) along with clean templates and writing guides.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex gap-2 justify-end bg-transparent border-none p-0">
+            <AlertDialogCancel
+              onClick={() => setIsResetDialogOpen(false)}
+              className="rounded-xl px-3.5 py-2 text-xs font-medium text-[#656057] hover:bg-[#EAE4D7] border border-[#D5CEC2] cursor-pointer"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await resetToCleanDefaults();
+                setIsResetDialogOpen(false);
+                setRefreshTrigger(k => k + 1);
+              }}
+              className="rounded-xl px-4 py-2 bg-[#C77B5B] hover:bg-[#B3684A] text-white text-xs font-semibold cursor-pointer"
+            >
+              Reset Defaults
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

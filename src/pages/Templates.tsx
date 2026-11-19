@@ -11,7 +11,6 @@ import {
   Bookmark, 
   PenTool,
   Loader2,
-  X,
   ArrowRight
 } from 'lucide-react';
 import { useInkFlowStore } from '../store/useInkFlowStore';
@@ -19,6 +18,14 @@ import { db } from '../storage/DexieStorage';
 import { ProceduralArt } from '../components/ui/ProceduralArt';
 import { requestOllamaCompletion } from '../lib/ollama';
 import type { DocumentType } from '../types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 
 function getNow(): number {
   return Date.now();
@@ -417,70 +424,65 @@ Chapter Title | Brief Scene Objective`;
         </div>
       </div>
 
-      {/* AI Template Generator Modal */}
-      {aiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D7]">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#C77B5B]" />
-                <h3 className="font-serif font-bold text-base text-[#25251F]">
-                  Generate Template with AI
-                </h3>
-              </div>
-              <button 
-                onClick={() => setAiModalOpen(false)}
-                className="p-1 text-[#8A847A] hover:text-[#25251F] rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* shadcn Dialog: AI Template Generator */}
+      <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+        <DialogContent className="bg-[#FAF7F2] border border-[#DDD5C7] rounded-2xl max-w-lg w-full p-6 shadow-xl text-[#25251F]">
+          <DialogHeader className="pb-2 border-b border-[#E8E2D7]">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#C77B5B]" />
+              <DialogTitle className="font-serif font-bold text-base text-[#25251F]">
+                Generate Template with AI
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-[#6B655A]">
+              Describe what you want to write in your own words, and inkFlow will generate a structured, chaptered template.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleGenerateTemplateWithAI} className="space-y-4 text-xs pt-2">
+            <div>
+              <label className="block font-semibold text-[#403D37] mb-1">
+                Describe your story idea or writing format
+              </label>
+              <textarea
+                autoFocus
+                rows={4}
+                value={aiIdeaPrompt}
+                onChange={(e) => setAiIdeaPrompt(e.target.value)}
+                placeholder="e.g. A four-part gothic mystery set in a decaying cliffside conservatory, focusing on hidden heirlooms and ancient debts..."
+                className="w-full p-3 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:border-[#3E5535] resize-none"
+              />
             </div>
 
-            <form onSubmit={handleGenerateTemplateWithAI} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-[#403D37] mb-1">
-                  Describe your story idea or writing format
-                </label>
-                <textarea
-                  autoFocus
-                  rows={4}
-                  value={aiIdeaPrompt}
-                  onChange={(e) => setAiIdeaPrompt(e.target.value)}
-                  placeholder="e.g. A four-part gothic mystery set in a decaying cliffside conservatory, focusing on hidden heirlooms and ancient debts..."
-                  className="w-full p-3 rounded-xl bg-[#F4EFE6] border border-[#DDD5C7] text-xs text-[#25251F] placeholder-[#9E988D] focus:outline-none focus:border-[#3E5535] resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setAiModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!aiIdeaPrompt.trim() || isAIGenerating}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white font-semibold shadow-xs disabled:opacity-40 transition-colors cursor-pointer"
-                >
-                  {isAIGenerating ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Structuring with Ollama...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Create Template</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter className="flex items-center justify-end gap-2 pt-2 bg-transparent border-none p-0">
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-[#DDD5C7] text-[#615C53] hover:bg-[#ECE5D8] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!aiIdeaPrompt.trim() || isAIGenerating}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3F5236] hover:bg-[#32422B] text-white font-semibold shadow-xs disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                {isAIGenerating ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Structuring with Ollama...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Create Template</span>
+                  </>
+                )}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
